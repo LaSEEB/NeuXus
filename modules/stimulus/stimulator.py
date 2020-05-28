@@ -216,8 +216,8 @@ def main(args):
     for class_ in sequence:
         for marker in scenario.loop:
             if args.verbose:
-                print(marker.get_name())
-            outlet.push_sample([marker.get_name()])
+                print(marker.get_name(class_))
+            outlet.push_sample([marker.get_name(class_)])
             time.sleep(marker.get_duration())
 
     # send end
