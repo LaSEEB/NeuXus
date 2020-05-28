@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<config>
+        <info>
+                <name>Graz Motor Imagery with OV stim codes</name>
+                <author>Thanos</author>
+                <number_of_trials>20</number_of_trials>
+                <!-- each class appear number_of_trials times -->
+        </info>
+        <!-- Classes which appear in the loops -->
+        <classes>
+                <class>
+                        <name>769</name> <!-- left -->
+                </class>
+                <class>
+                        <name>770</name> <!-- right -->
+                </class>
+        </classes>
+        <!-- Initalzation of the experiment -->
+        <init>
+                <step>
+                        <name>32769</name> <!-- ExperimentStart -->
+                        <duration>5</duration>
+                </step>
+                <step>
+                        <name>32775</name> <!-- BaselineStart -->
+                        <duration>20</duration>
+                </step>
+                <step>
+                        <name>32776</name> <!-- BaselineStop -->
+                        <duration>5</duration>
+                </step>
+        </init>
+        <!-- The loop is repeated number_of_trials * nb_of_classes times -->
+        <loop>
+                <step>
+                    <name>768</name> <!-- StartOfTrial and CrossOnScreen -->
+                        <duration>1</duration>
+                </step>
+                <step>
+                        <name>Class</name> <!--  -->
+                        <duration>1.25</duration>
+                </step>
+                <step>
+                        <name>781</name> <!-- FeedbackContinuous -->
+                        <duration>2</duration>
+                </step>
+                <step>
+                        <name>800</name> <!-- End of Trial -->
+                        <min_duration>1</min_duration>
+                        <max_duration>3.75</max_duration>
+                </step>
+        </loop>
+        <!-- End of the experiment -->
+        <end>
+                <step>
+                        <name>1010</name> <!--  -->
+                        <duration>5</duration>
+                </step>
+                <step>
+                        <name>32770</name> <!--  -->
+                        <duration>5</duration>
+                </step>
+        </end>
+</config>
