@@ -5,9 +5,9 @@
                 <author>Thanos</author>
                 <number_of_trials>20</number_of_trials>
                 <!-- each class appear number_of_trials times -->
-                <marker_type>float32</marker_type>
+                <marker_type>int32</marker_type>
                 <!-- among [float32, string, int32, int16, int8, int64] be carefull ta add convertible name of step-->
-                <stream_name>MyMarkerStream</stream_name>
+                <stream_name>openvibeMarkers</stream_name>
 
         </info>
         <!-- Classes which appear in the loops -->
