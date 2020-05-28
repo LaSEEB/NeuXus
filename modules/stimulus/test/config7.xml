@@ -5,6 +5,9 @@
                 <author>S.Legeay</author>
                 <number_of_trials>20</number_of_trials>
                 <!-- each class appear number_of_trials times -->
+                <marker_type>string</marker_type>
+                <!-- among ['float32', double64, 'string', 'int32', 'int16', 'int8', 'int64'] -->
+                <stream_name>MyMarkerStream</stream_name>
         </info>
         <!-- Classes which appear in the loops -->
         <classes>

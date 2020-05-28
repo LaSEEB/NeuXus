@@ -5,6 +5,8 @@ import argparse
 from pylsl import StreamInfo, StreamOutlet
 from xml.dom import minidom
 from xml.parsers.expat import ExpatError
+from tqdm import tqdm
+import numpy as np
 
 """
 Author: S.LEGEAY, intern at LaSEEB
@@ -12,7 +14,11 @@ e-mail: legeay.simon.sup@gmail.com
 
 
 Create a Marker stream of a scenario described in a xml file specified in parser
+Launch: python stimulator.py config.xml
 """
+
+VALID_TYPE = ['float32',  'double64', 'string',
+              'int32', 'int16', 'int8', 'int64']
 
 
 class ConfigFileNotInAccordance(Exception):
@@ -57,69 +63,96 @@ def get_section(file, section):
     return section
 
 
-def get_data(step, data, section):
+def get_data(step, data, section, convert=None):
     """Function used for reading xml file, it extracts data from step"""
     try:
         item = step.getElementsByTagName(data)[0]
     except IndexError:
         raise ConfigFileNotInAccordance(
             f'No {data} implemented in a step of {section}')
-    if data in ['duration', 'min_duration', 'max_duration', 'number_of_trials']:
+    if convert:
         try:
-            return float(item.firstChild.data)
+            return convert(item.firstChild.data)
         except ValueError:
             raise ConfigFileNotInAccordance(
                 f'{item.firstChild.data} in subsection \'{section}\' is not a valid {data} value')
     return item.firstChild.data
 
 
-def extract_classes(file):
+def extract_classes(file, convert):
     """get the different classes from the file"""
     classes = []
     section = get_section(file, 'classes')
     for class_ in section.getElementsByTagName('class'):
-        name = get_data(class_, 'name', 'classes')
+        name = get_data(class_, 'name', 'classes', convert)
         classes.append(name)
     return classes
 
 
-def extract_init(file):
+def extract_init(file, convert):
     """get the init of scenario from the file"""
     init = []
     section = get_section(file, 'init')
     for step in section.getElementsByTagName('step'):
-        name = get_data(step, 'name', 'init')
-        duration = get_data(step, 'duration', 'init')
+        name = get_data(step, 'name', 'init', convert)
+        duration = get_data(step, 'duration', 'init', float)
         init.append(Marker(name, duration))
     return init
 
 
-def extract_loop(file):
+def extract_loop(file, convert):
     """get the loop of the scenario from the file"""
     loop = []
     section = get_section(file, 'loop')
     for step in section.getElementsByTagName('step'):
         name = get_data(step, 'name', 'loop')
-        if step.getElementsByTagName('duration'):
-            duration = get_data(step, 'duration', 'loop')
-            loop.append(Marker(name, duration))
+        if name == 'Class':
+            if step.getElementsByTagName('duration'):
+                duration = get_data(step, 'duration', 'loop', float)
+                loop.append(MarkerClass(name, duration))
+            else:
+                min_duration = get_data(step, 'min_duration', 'loop', float)
+                max_duration = get_data(step, 'max_duration', 'loop', float)
+                loop.append(MarkerClass(name, None,
+                                        min_duration, max_duration))
         else:
-            min_duration = get_data(step, 'min_duration', 'loop')
-            max_duration = get_data(step, 'max_duration', 'loop')
-            loop.append(Marker(name, None,
-                               min_duration, max_duration))
+            name = convert(name)
+            if step.getElementsByTagName('duration'):
+                duration = get_data(step, 'duration', 'loop', float)
+                loop.append(Marker(name, duration))
+            else:
+                min_duration = get_data(step, 'min_duration', 'loop', float)
+                max_duration = get_data(step, 'max_duration', 'loop', float)
+                loop.append(Marker(name, None,
+                                   min_duration, max_duration))
     return loop
 
 
-def extract_end(file):
+def extract_end(file, convert):
     """get the end of the scenario from the file"""
     end = []
     section = get_section(file, 'end')
     for step in section.getElementsByTagName('step'):
-        name = get_data(step, 'name', 'end')
-        duration = get_data(step, 'duration', 'end')
+        name = get_data(step, 'name', 'end', convert)
+        duration = get_data(step, 'duration', 'end', float)
         end.append(Marker(name, duration))
     return end
+
+
+def get_type_function(type_):
+    """According specified type, return the function that convert to the type specified"""
+    if type_ == 'float32':
+        return np.float32
+    elif type_ == 'string':
+        return str
+    elif type_ == 'int32':
+        return np.int32
+    elif type_ == 'int16':
+        return np.int16
+    elif type_ == 'int8':
+        return np.int8
+    elif type_ == 'int64':
+        return np.int64
 
 
 class Config(object):
@@ -134,12 +167,22 @@ class Config(object):
         except ExpatError as err:
             raise InvalidXml(file, err)
         self.number_of_trials = get_data(file, 'number_of_trials', 'info')
+        try:
+            self.number_of_trials = float(self.number_of_trials)
+        except ValueError:
+            raise ConfigFileNotInAccordance(f'{self.number_of_trials} is not a number')
+        self.type = get_data(file, 'marker_type', 'info')
+        if self.type not in VALID_TYPE:
+            raise ConfigFileNotInAccordance(f'{self.type} is not an accepted type')
+        self.type_function = get_type_function(self.type)
+        self.stream_name = get_data(file, 'stream_name', 'info')
         self.name = get_data(file, 'name', 'info')
         self.author = get_data(file, 'author', 'info')
-        self.classes = extract_classes(file)
-        self.init = extract_init(file)
-        self.loop = extract_loop(file)
-        self.end = extract_end(file)
+
+        self.classes = extract_classes(file, self.type_function)
+        self.init = extract_init(file, self.type_function)
+        self.loop = extract_loop(file, self.type_function)
+        self.end = extract_end(file, self.type_function)
 
     def create_a_new_sequence(self):
         """Create a new random sequence of length number_of_trials * nb_of_classes
@@ -158,16 +201,9 @@ class Marker(object):
     def __init__(self, name, duration, min_duration=None, max_duration=None):
         super(Marker, self).__init__()
         self.name = name
-        if duration:
-            self.duration = float(duration)
-        else:
-            self.duration = None
-        if min_duration and max_duration:
-            self.min_duration = float(min_duration)
-            self.max_duration = float(max_duration)
-        else:
-            self.min_duration = None
-            self.max_duration = None
+        self.duration = duration
+        self.min_duration = min_duration
+        self.max_duration = max_duration
 
     def get_duration(self):
         if self.duration:
@@ -176,9 +212,17 @@ class Marker(object):
             return rd.uniform(self.min_duration, self.max_duration)
 
     def get_name(self, class_=None):
-        if self.name == 'Class' and class_:
-            return class_
         return self.name
+
+
+class MarkerClass(Marker):
+    """"""
+
+    def __init__(self, name, duration, min_duration=None, max_duration=None):
+        super().__init__(name, duration, min_duration, max_duration)
+
+    def get_name(self, class_):
+        return class_
 
 
 def main(args):
@@ -187,10 +231,13 @@ def main(args):
     except (ConfigFileNotInAccordance, FileNotFound, InvalidXml) as err:
         print(err)
         exit()
+
     sequence = scenario.create_a_new_sequence()
 
     # create a new StreamInfo object which shall describe our stream
-    info = StreamInfo('openvibeMarkers', 'Markers', 1, 0, 'string', 'marker1') # uid it is an optional parameter, to skip
+    # uid it is an optional parameter, to skip
+    info = StreamInfo(scenario.stream_name, 'Markers',
+                      1, 0, scenario.type, 'marker1')
 
     # now attach some meta-data
     config = info.desc().append_child("config")
@@ -199,7 +246,7 @@ def main(args):
     config.append_child_value("type", scenario.name)
     config.append_child_value("author", scenario.author)
     for i, class_ in enumerate(scenario.classes):
-        config.append_child_value(f"class{i}", class_)
+        config.append_child_value(f"class{i}", str(class_))
 
     # next make an outlet
     outlet = StreamOutlet(info)
@@ -213,7 +260,9 @@ def main(args):
         time.sleep(marker.get_duration())
 
     # send loop
-    for class_ in sequence:
+    for class_ in tqdm(sequence, desc='Progression'):
+        if args.verbose:
+            print()
         for marker in scenario.loop:
             if args.verbose:
                 print(marker.get_name(class_))
@@ -232,9 +281,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Read the config from the specified xml file and launch an LSL marker stream")
-    parser.add_argument("-v", "--verbose",
-                        action="store_true", help="verbose mode")
-    parser.add_argument("file", help="path to the config file")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="verbose mode")
+    parser.add_argument(
+        "file",
+        help="path to the config file")
     args = parser.parse_args()
 
     main(args)

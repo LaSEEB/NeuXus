@@ -1,43 +1,43 @@
 <?xml version="1.0"?>
 <config>
         <info>
-                <name>Graz Motor Imagery</name>
+                <name>Test2</name>
                 <author>S.Legeay</author>
-                <number_of_trials>20</number_of_trials>
+                <number_of_trials>25.0</number_of_trials>
                 <!-- each class appear number_of_trials times -->
-                <marker_type>string</marker_type>
+                <marker_type>float32</marker_type>
                 <!-- among [float32, string, int32, int16, int8, int64] be carefull ta add convertible name of step-->
-                <stream_name>MyMarkerStream</stream_name>
+                <stream_name>MyMarkerStream2</stream_name>
         </info>
         <!-- Classes which appear in the loops -->
         <classes>
                 <class>
-                        <name>LEFT ARROW</name>
+                        <name>40</name>
                 </class>
                 <class>
-                        <name>RIGHT ARROW</name>
+                        <name>41</name>
                 </class>
         </classes>
         <!-- Initalzation of the experiment -->
         <init>
                 <step>
-                        <name>ExperimentStart</name>
+                        <name>1</name>
                         <duration>5</duration>
                 </step>
                 <step>
-                        <name>BaselineStart</name>
+                        <name>2</name>
                         <duration>20</duration>
                 </step>
                 <step>
-                        <name>BaselineStop</name>
+                        <name>03</name>
                         <duration>5</duration>
                 </step>
         </init>
         <!-- The loop is repeated number_of_trials * nb_of_classes times -->
         <loop>
                 <step>
-                        <name>StartOfTrial and CrossOnScreen</name>
-                        <duration>1</duration>
+                        <name>4</name>
+                        <duration>4</duration>
                 </step>
                 <step>
                         <name>Class</name>
@@ -45,11 +45,11 @@
                         <duration>1.25</duration>
                 </step>
                 <step>
-                        <name>FeedbackContinuous</name>
+                        <name>5</name>
                         <duration>2</duration>
                 </step>
                 <step>
-                        <name>EndOfTrial</name>
+                        <name>6</name>
                         <min_duration>1</min_duration>
                         <max_duration>3.75</max_duration>
                 </step>
@@ -57,11 +57,11 @@
         <!-- End of the experiment -->
         <end>
                 <step>
-                        <name>EndOfSession</name>
+                        <name>8</name>
                         <duration>5</duration>
                 </step>
                 <step>
-                        <name>ExperimentStop</name>
+                        <name>9</name>
                         <duration>5</duration>
                 </step>
         </end>

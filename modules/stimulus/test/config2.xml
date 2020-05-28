@@ -4,6 +4,9 @@
                 <name>Graz Motor Imagery</name>
                 <author>S.Legeay</author>
                 <number_of_trials>20</number_of_trials>
+                <marker_type>string</marker_type>
+                <!-- among ['float32', double64, 'string', 'int32', 'int16', 'int8', 'int64'] -->
+                <stream_name>MyMarkerStream</stream_name>
         </info>
         <init>
         </init>
