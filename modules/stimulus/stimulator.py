@@ -210,7 +210,7 @@ def main(args):
         if args.verbose:
             print(marker.get_name())
         outlet.push_sample([marker.get_name()])
-        #time.sleep(marker.get_duration())
+        time.sleep(marker.get_duration())
 
     # send loop
     for class_ in sequence:
@@ -218,14 +218,14 @@ def main(args):
             if args.verbose:
                 print(marker.get_name())
             outlet.push_sample([marker.get_name()])
-            #time.sleep(marker.get_duration())
+            time.sleep(marker.get_duration())
 
     # send end
     for marker in scenario.end:
         if args.verbose:
             print(marker.get_name())
         outlet.push_sample([marker.get_name()])
-        #time.sleep(marker.get_duration())
+        time.sleep(marker.get_duration())
     return
 
 if __name__ == "__main__":
