@@ -37,8 +37,12 @@
         <!-- The loop is repeated number_of_trials * nb_of_classes times -->
         <loop>
                 <step>
-                    <name>768</name> <!-- StartOfTrial and CrossOnScreen -->
-                        <duration>1</duration>
+                    <name>768</name> <!-- StartOfTrial -->
+                        <duration>1.25</duration>
+                </step>
+				<step>
+                    <name>786</name> <!-- CrossOnScreen -->
+                        <duration>2</duration>
                 </step>
                 <step>
                         <name>Class</name>
@@ -47,22 +51,22 @@
                 </step>
                 <step>
                         <name>781</name> <!-- FeedbackContinuous -->
-                        <duration>2</duration>
+                        <duration>3.75</duration>
                 </step>
                 <step>
                         <name>800</name> <!-- End of Trial -->
-                        <min_duration>1</min_duration>
-                        <max_duration>3.75</max_duration>
+                        <min_duration>2</min_duration>
+                        <max_duration>2.75</max_duration>
                 </step>
         </loop>
         <!-- End of the experiment -->
         <end>
                 <step>
-                        <name>1010</name> <!--  -->
+                        <name>1010</name> <!-- EndOfSession -->
                         <duration>5</duration>
                 </step>
                 <step>
-                        <name>32770</name> <!--  -->
+                        <name>32770</name> <!-- ExperimentStop -->
                         <duration>5</duration>
                 </step>
         </end>
