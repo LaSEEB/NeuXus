@@ -1,60 +1,150 @@
 import time
 import random as rd
+import argparse
 
 from pylsl import StreamInfo, StreamOutlet
 from xml.dom import minidom
+from xml.parsers.expat import ExpatError
 
 """
-Create a Marker stream of a scenario described in config.xml
+Author: S.LEGEAY, intern at LaSEEB
+e-mail: legeay.simon.sup@gmail.com
+
+
+Create a Marker stream of a scenario described in a xml file specified in parser
 """
+
+
+class ConfigFileNotInAccordance(Exception):
+    """Exception raised when the config file is not in accordance with rules"""
+
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        message = "An error occured when loading the config file:\n"
+        return message + self.message
+
+
+class FileNotFound(Exception):
+    """Exception raised when the specified file does not exist"""
+
+    def __init__(self, file):
+        self.file = file
+
+    def __str__(self):
+        return f'{self.file} not found'
+
+
+class InvalidXml(Exception):
+    """Exception raised when the config file cannot be opened"""
+
+    def __init__(self, file, err):
+        self.file = file
+        self.err = err
+
+    def __str__(self):
+        return f'{self.file} is not a readable xml, please check the file ({self.err})'
+
+
+def get_section(file, section):
+    """Function used for reading xml file, exttract sections such as init class"""
+    try:
+        section = file.getElementsByTagName(section)[0]
+    except IndexError as err:
+        raise ConfigFileNotInAccordance(
+            f'No {section} implemented in config file, please add subsection \'{section}\'')
+    return section
+
+
+def get_data(step, data, section):
+    """Function used for reading xml file, it extracts data from step"""
+    try:
+        item = step.getElementsByTagName(data)[0]
+    except IndexError:
+        raise ConfigFileNotInAccordance(
+            f'No {data} implemented in a step of {section}')
+    if data in ['duration', 'min_duration', 'max_duration', 'number_of_trials']:
+        try:
+            return float(item.firstChild.data)
+        except ValueError:
+            raise ConfigFileNotInAccordance(
+                f'{item.firstChild.data} in subsection \'{section}\' is not a valid {data} value')
+    return item.firstChild.data
+
+
+def extract_classes(file):
+    """get the different classes from the file"""
+    classes = []
+    section = get_section(file, 'classes')
+    for class_ in section.getElementsByTagName('class'):
+        name = get_data(class_, 'name', 'classes')
+        classes.append(name)
+    return classes
+
+
+def extract_init(file):
+    """get the init of scenario from the file"""
+    init = []
+    section = get_section(file, 'init')
+    for step in section.getElementsByTagName('step'):
+        name = get_data(step, 'name', 'init')
+        duration = get_data(step, 'duration', 'init')
+        init.append(Marker(name, duration))
+    return init
+
+
+def extract_loop(file):
+    """get the loop of the scenario from the file"""
+    loop = []
+    section = get_section(file, 'loop')
+    for step in section.getElementsByTagName('step'):
+        name = get_data(step, 'name', 'loop')
+        if step.getElementsByTagName('duration'):
+            duration = get_data(step, 'duration', 'loop')
+            loop.append(Marker(name, duration))
+        else:
+            min_duration = get_data(step, 'min_duration', 'loop')
+            max_duration = get_data(step, 'max_duration', 'loop')
+            loop.append(Marker(name, None,
+                               min_duration, max_duration))
+    return loop
+
+
+def extract_end(file):
+    """get the end of the scenario from the file"""
+    end = []
+    section = get_section(file, 'end')
+    for step in section.getElementsByTagName('step'):
+        name = get_data(step, 'name', 'end')
+        duration = get_data(step, 'duration', 'end')
+        end.append(Marker(name, duration))
+    return end
 
 
 class Config(object):
-    """docstring for Config"""
+    """object describing the config file"""
+
     def __init__(self, file):
         super(Config, self).__init__()
-        self.file = minidom.parse(file)
-        self.number_of_trials = int(self.file.getElementsByTagName('number_of_trials')[0].firstChild.data)
-
-        # get classes from the file
-        classes = []
-        for class_ in self.file.getElementsByTagName('classes')[0].getElementsByTagName('class'):
-            name = class_.getElementsByTagName('name')[0].firstChild.data
-            classes.append(name)
-        self.classes = classes
-
-        # get init from the file
-        init = []
-        for step in self.file.getElementsByTagName('init')[0].getElementsByTagName('step'):
-            name = step.getElementsByTagName('name')[0].firstChild.data
-            duration = step.getElementsByTagName('duration')[0].firstChild.data
-            init.append(Marker(name, float(duration)))
-        self.init = init
-
-        # get loop from the file
-        loop = []
-        for step in self.file.getElementsByTagName('loop')[0].getElementsByTagName('step'):
-            name = step.getElementsByTagName('name')[0].firstChild.data
-            try:
-                duration = step.getElementsByTagName('duration')[0].firstChild.data
-            except IndexError:
-                min_duration = step.getElementsByTagName('min_duration')[0].firstChild.data
-                max_duration = step.getElementsByTagName('max_duration')[0].firstChild.data
-                loop.append(Marker(name, None, float(min_duration), float(max_duration)))
-            else:
-                loop.append(Marker(name, float(duration)))
-        self.loop = loop
-
-        # get end from the file
-        end = []
-        for step in self.file.getElementsByTagName('end')[0].getElementsByTagName('step'):
-            name = step.getElementsByTagName('name')[0].firstChild.data
-            duration = step.getElementsByTagName('duration')[0].firstChild.data
-            end.append(Marker(name, float(duration)))
-        self.end = end
+        try:
+            file = minidom.parse(file)
+        except FileNotFoundError:
+            raise FileNotFound(file)
+        except ExpatError as err:
+            raise InvalidXml(file, err)
+        self.number_of_trials = get_data(file, 'number_of_trials', 'info')
+        self.name = get_data(file, 'name', 'info')
+        self.author = get_data(file, 'author', 'info')
+        self.classes = extract_classes(file)
+        self.init = extract_init(file)
+        self.loop = extract_loop(file)
+        self.end = extract_end(file)
 
     def create_a_new_sequence(self):
-        sequence = self.classes * self.number_of_trials
+        """Create a new random sequence of length number_of_trials * nb_of_classes
+        with number_of_trials elements by class"""
+        sequence = self.classes * int(self.number_of_trials)
         for i in sequence:
             a = rd.randrange(self.number_of_trials * 2)
             b = rd.randrange(self.number_of_trials * 2)
@@ -63,74 +153,90 @@ class Config(object):
 
 
 class Marker(object):
-    """docstring for Marker"""
+    """Object describing a marker"""
+
     def __init__(self, name, duration, min_duration=None, max_duration=None):
         super(Marker, self).__init__()
         self.name = name
-        self.duration = duration
-        self.min_duration = min_duration
-        self.max_duration = max_duration
-        
+        if duration:
+            self.duration = float(duration)
+        else:
+            self.duration = None
+        if min_duration and max_duration:
+            self.min_duration = float(min_duration)
+            self.max_duration = float(max_duration)
+        else:
+            self.min_duration = None
+            self.max_duration = None
+
     def get_duration(self):
         if self.duration:
             return self.duration
         else:
             return rd.uniform(self.min_duration, self.max_duration)
 
-    def is_class(self):
-        if self.name == 'Class':
-            return True
-        return False
+    def get_name(self, class_=None):
+        if self.name == 'Class' and class_:
+            return class_
+        return self.name
 
 
-if __name__ == "__main__":
-
-    scenario = Config('config.xml')
+def main(args):
+    try:
+        scenario = Config(args.file)
+    except (ConfigFileNotInAccordance, FileNotFound, InvalidXml) as err:
+        print(err)
+        exit()
+    sequence = scenario.create_a_new_sequence()
 
     # create a new StreamInfo object which shall describe our stream
     info = StreamInfo('MarkerStream', 'Markers', 1, 0, 'string', 'marker1')
 
-    # TO DO
-    '''
     # now attach some meta-data
-    info.desc().append_child_value("Type", "Graz Motor Imagery")
     config = info.desc().append_child("config")
-    config.append_child_value("number_of_trials", str(number_of_trials))
-    config.append_child_value("class1", first_class)
-    config.append_child_value("class2", second_class)
-    config.append_child_value("baseline_duration", str(baseline_duration))
-    config.append_child_value("wait_for_beep_duration", str(wait_for_beep_duration))
-    config.append_child_value("wait_for_cue_duration", str(wait_for_cue_duration))
-    config.append_child_value("display_cue_duration", str(display_cue_duration))
-    config.append_child_value("feedback_duration", str(feedback_duration))
-    config.append_child_value("end_of_trial_min_duration",
-                              str(end_of_trial_min_duration))
-    config.append_child_value("end_of_trial_max_duration",
-                              str(end_of_trial_max_duration))
-    '''
+    config.append_child_value(
+        "number_of_trials", str(scenario.number_of_trials))
+    config.append_child_value("type", scenario.name)
+    config.append_child_value("author", scenario.author)
+    for i, class_ in enumerate(scenario.classes):
+        config.append_child_value(f"class{i}", class_)
+
     # next make an outlet
     outlet = StreamOutlet(info)
+    print('Now sending Markers...')
 
-    sequence = scenario.create_a_new_sequence()
-
+    # send init
     for marker in scenario.init:
-        print(marker.name)
-        outlet.push_sample([marker.name])
-        time.sleep(marker.get_duration())
+        if args.verbose:
+            print(marker.get_name())
+        outlet.push_sample([marker.get_name()])
+        #time.sleep(marker.get_duration())
 
+    # send loop
     for class_ in sequence:
         for marker in scenario.loop:
-            if marker.is_class():
-                print(class_)
-                outlet.push_sample([class_])
-            else:
-                print(marker.name)
-                outlet.push_sample([marker.name])
-            time.sleep(marker.get_duration())
+            if args.verbose:
+                print(marker.get_name())
+            outlet.push_sample([marker.get_name()])
+            #time.sleep(marker.get_duration())
 
+    # send end
     for marker in scenario.end:
-        print(marker.name)
-        outlet.push_sample([marker.name])
-        time.sleep(marker.get_duration())
+        if args.verbose:
+            print(marker.get_name())
+        outlet.push_sample([marker.get_name()])
+        #time.sleep(marker.get_duration())
+    return
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description="Read the config from the specified xml file and launch an LSL marker stream")
+    parser.add_argument("-v", "--verbose",
+                        action="store_true", help="verbose mode")
+    parser.add_argument("file", help="path to the config file")
+    args = parser.parse_args()
+
+    main(args)
 
     exit()

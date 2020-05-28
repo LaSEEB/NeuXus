@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config>
+        <info>
+                <name>Graz Motor Imagery</name>
+                <author>S.Legeay</author>
+                <number_of_trials>20</number_of_trials>
+        </info>
+        <classes>
+        </classes>
+        <init>
+        </init>
+        <end>
+        </end>
+</config>

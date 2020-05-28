@@ -9,7 +9,7 @@
         <!-- Classes which appear in the loops -->
         <classes>
                 <class>
-                        <name>LEFT ARROW</name>
+                        <name>LEFT ARROW</nae>
                 </class>
                 <class>
                         <name>RIGHT ARROW</name>
@@ -34,7 +34,7 @@
         <loop>
                 <step>
                         <name>StartOfTrial and CrossOnScreen</name>
-                        <duration>m</duration>
+                        <duration>4</duration>
                 </step>
                 <step>
                         <name>Class</name>

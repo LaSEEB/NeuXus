@@ -34,7 +34,7 @@
         <loop>
                 <step>
                         <name>StartOfTrial and CrossOnScreen</name>
-                        <duration>m</duration>
+                        <duration>4</duration>
                 </step>
                 <step>
                         <name>Class</name>

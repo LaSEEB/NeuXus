@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<config>
+        <info>
+                <name>Graz Motor Imagery</name>
+                <author>S.Legeay</author>
+                <number_of_trials>20</number_of_trials>
+        </info>
+        <classes>
+        </classes>
+        <init>
+                <step>
+                        <name>BaselineStart</name>
+                        <duration>m</duration>
+                </step>
+                <step>
+                        <name>BaselineStop</name>
+                        <duration>5</duration>
+                </step>
+        </init>
+        <loop>
+        </loop>
+        <end>
+        </end>
+</config>
