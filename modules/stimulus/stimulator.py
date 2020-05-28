@@ -190,7 +190,7 @@ def main(args):
     sequence = scenario.create_a_new_sequence()
 
     # create a new StreamInfo object which shall describe our stream
-    info = StreamInfo('MarkerStream', 'Markers', 1, 0, 'string', 'marker1')
+    info = StreamInfo('openvibeMarkers', 'Markers', 1, 0, 'string', 'marker1') # uid it is an optional parameter, to skip
 
     # now attach some meta-data
     config = info.desc().append_child("config")
