@@ -137,7 +137,8 @@ def app(verbose):
         bool_ = True
         while bool_:
             sample, timestamp = inlet.pull_sample()
-            print("got %s at time %s" % (sample[0], timestamp))
+            if verbose:
+                print("got %s at time %s" % (sample[0], timestamp))
             if sample[0] == MARKERS['show_cross']:
                 myCanvas.show_cross()
             elif sample[0] == MARKERS['show_rigth_arrow']:
