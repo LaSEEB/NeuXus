@@ -277,6 +277,7 @@ def main(args):
         time.sleep(marker.get_duration())
     return
 
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
