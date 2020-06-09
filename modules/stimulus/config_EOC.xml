@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<config>
+        <info>
+                <name>Eyes-open/closed</name>
+                <author>Thanos</author>
+                <number_of_trials>2</number_of_trials>
+                <!-- each class appear number_of_trials times -->
+                <marker_type>string</marker_type>
+                <!-- among [float32, string, int32, int16, int8, int64] be carefull ta add convertible name of step-->
+                <stream_name>ECMarkers</stream_name>
+
+        </info>
+        <!-- Classes which appear in the loops -->
+        <classes>
+                <class>
+                        <name>EyesOpen</name> <!-- EO -->
+                </class>
+                <class>
+                        <name>EyesClosed</name> <!-- EC -->
+                </class>
+        </classes>
+        <!-- Initalzation of the experiment -->
+        <init>
+                <step>
+                        <name>ExperimentStart</name> <!-- ExperimentStart -->
+                        <duration>5</duration>
+                </step>
+
+        </init>
+        <!-- The loop is repeated number_of_trials * nb_of_classes times -->
+        <loop>
+                <step>
+                    <name>StartOfTrial</name> <!-- StartOfTrial -->
+                        <duration>1.25</duration>
+                </step>
+                <step>
+                        <name>Class</name>
+                        <!-- Class will be replaced by classes specified before -->
+                        <duration>1.25</duration>
+                </step>
+                <step>
+                        <name>FeedbackContinuous</name> <!-- FeedbackContinuous -->
+                        <duration>60</duration>
+                </step>
+                <step>
+                        <name>EndofTrial</name> <!-- End of Trial -->
+                        <min_duration>2</min_duration>
+                        <max_duration>2.75</max_duration>
+                </step>
+        </loop>
+        <!-- End of the experiment -->
+        <end>
+                <step>
+                        <name>EndOfSession</name> <!-- EndOfSession -->
+                        <duration>2</duration>
+                </step>
+                <step>
+                        <name>ExperimentStop</name> <!-- ExperimentStop -->
+                        <duration>1</duration>
+                </step>
+        </end>
+</config>
