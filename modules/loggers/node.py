@@ -1,15 +1,9 @@
 from scipy import signal
 import pandas as pd
 import numpy as np
-# import uuid
+import uuid
 from time import time
-from pylsl import (
-    StreamInfo,
-    StreamOutlet,
-    StreamInlet,
-    resolve_stream,
-    pylsl,
-)
+from pylsl import (StreamInfo, StreamOutlet, StreamInlet, resolve_byprop, pylsl)
 
 
 class Send(object):
@@ -25,13 +19,16 @@ class Send(object):
 
     _dtypes = {"double64": np.number, "string": np.object}
 
-    def __init__(self, input_, name, frequency, type_="signal", format="double64"):
+    def __init__(self, input_, name, frequency, type_="signal", format="double64", uuid_=None):
         self.name = name
         self.type = type_
         self.format = format
         self.frequency = frequency
         self.outlet = None
         self.input = input_
+        if not uuid_:
+            uuid_ = str(uuid.uuid4())
+        self.uuid = uuid_
         self.connect()
 
     def connect(self):
@@ -45,12 +42,13 @@ class Send(object):
                 len(self.input.channels),
                 self.frequency,
                 self.format,
-                'myuuidtodo'
+                self.uuid
             )
             channels = info.desc().append_child("channels")
+            print('output' + str(self.input.channels))
             for label in self.input.channels:
                 channels.append_child("channel")\
-                    .append_child_value("name", str(label))\
+                    .append_child_value("label", str(label))\
                     .append_child_value("unit", "unknown")\
                     .append_child_value("type", "signal")
 
@@ -76,12 +74,15 @@ class Receive(object):
         max_samples (int): The maximum number of samples to return per call.
     """
 
-    def __init__(self, output_, sync="local", max_samples=1024 * 4):
+    def __init__(self, output_, prop, value, sync="local", max_samples=1024 * 4, timeout=10.0):
         self.inlet = None
         self.labels = None
+        self._prop = prop
+        self._value = value
         self.sync = sync
         self.max_samples = max_samples
         self.offset = time() - pylsl.local_clock()
+        self._timeout = timeout
 
         self.output = output_
         self.connect()
@@ -89,9 +90,11 @@ class Receive(object):
     def connect(self):
         if not self.inlet:
             # resolve streams
-            streams = resolve_stream('name', 'openvibeSignal')
+            streams = resolve_byprop(self._prop, self._value, timeout=self._timeout)
             if not streams:
-                return
+                print('No streams found')
+                raise Exception
+            print('Stream acquired')
             # Stream acquired
             self.inlet = StreamInlet(streams[0])
             info = self.inlet.info()
@@ -102,8 +105,6 @@ class Receive(object):
                 "info": str(info.as_xml()).replace("\n", "").replace("\t", ""),
             }
 
-            self.output.set_meta(self.meta)
-
             channels = []
             if not info.desc().child("channels").empty():
                 channel = info.desc().child("channels").child("channel")
@@ -112,13 +113,18 @@ class Receive(object):
                     channels.append(channel_name)
                     channel = channel.next_sibling()
             self.channels = channels
+            print('Available channels:')
+            print(*channels, sep='\n')
+            print()
+            print(self.meta)
 
             self.output.set_channels(channels)
+            self.output.set_meta(self.meta)
+            self.output.set_frequency(info.nominal_srate())
 
     def update(self):
         if self.inlet:
-            values, stamps = self.inlet.pull_chunk(
-                max_samples=self.max_samples)
+            values, stamps = self.inlet.pull_chunk(max_samples=self.max_samples)
             if stamps:
                 stamps = np.array(stamps)
                 if self.sync == "local":
@@ -143,11 +149,15 @@ class ButterFilter(object):
         order (int): order to be applied on the butter filter (recommended < 16)
     """
 
-    def __init__(self, input_, output_, lowcut, highcut, fs, order=4):
+    def __init__(self, input_, output_, lowcut, highcut, order=4):
         super().__init__()
         self.input = input_
         self.output = output_
 
+        self.output.set_frequency(self.input.frequency)
+        self.output.set_channels(self.input.channels)
+
+        fs = self.input.frequency
         nyq = 0.5 * fs
         low = lowcut / nyq
         high = highcut / nyq
@@ -189,6 +199,9 @@ class Epoching(object):
         self.input = input_
         self.output = output_
         self.duration = duration
+
+        # self.output.set_frequency(1 / duration)
+        # self.output.set_channels(self.input.channels)
 
         self.persistent = pd.DataFrame([], [], self.input.channels)
         self.trigger = None
@@ -254,9 +267,12 @@ class ApplyFunction(object):
     """
 
     def __init__(self, input_, output_, function, args=()):
-        super().__init__()
         self.input = input_
         self.output = output_
+
+        self.output.set_frequency(self.input.frequency)
+        self.output.set_channels(self.input.channels)
+
         self.function = function
         self.args = args
 
@@ -274,18 +290,28 @@ class ChannelSelector(object):
         input_: get DataFrame and meta from input_ port
         output_: output GroupOfPorts
     Args:
-        duration: duration of epochs
+        mode ('index' or 'name'): indicate the way to select data
+        selected (list): column to be selected
+
+    example: ChannelSelector(port1, port2, 'index', [2, 4, 5])
+    or       ChannelSelector(port1, port2, 'name', ['Channel 2', 'Channel 4'])
     """
 
-    def __init__(self, input_, output_, selected_channels):
-        super().__init__()
+    def __init__(self, input_, output_, mode, selected):
+        assert mode in ['index', 'name']
         self.input = input_
         self.output = output_
-        self.channels = selected_channels
 
-        # TO DO terminate
+        self.output.set_frequency(self.input.frequency)
+        self.output.set_channels(selected)
+
+        self.mode = mode
+        self.selected = selected
 
     def update(self):
         if self.input.ready():
             df = self.input.data
-            self.output.set_from_df(df[self.channels])
+            if self.mode == 'name':
+                self.output.set_from_df(df[self.selected])
+            elif self.mode == 'index':
+                self.output.set_from_df(df.iloc[:, self.selected])

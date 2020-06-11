@@ -16,6 +16,9 @@ class Port:
     def set_meta(self, meta={}):
         self.meta = meta
 
+    def set_frequency(self, freq):
+        self.frequency = freq
+
     def set_channels(self, channels):
         self.channels = channels
 
@@ -33,6 +36,16 @@ class Port:
         except AttributeError:
             if not self.data:
                 return True
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.index == 0:
+            raise StopIteration
+        self.index = self.index - 1
+        return self.data[self.index]
+
 
 
 class GroupOfPorts(object):

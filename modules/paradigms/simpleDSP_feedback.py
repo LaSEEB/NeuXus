@@ -4,7 +4,6 @@ from time import time
 import matplotlib.pyplot as plt
 import pandas as pd
 
-
 sys.path.append('.')
 sys.path.append('../..')
 
@@ -17,24 +16,21 @@ if __name__ == '__main__':
     # for observation via plt
     observe_plt = False
 
+    nominal_srate = 250
+
     # initialize the pipeline
     port0 = Port()
-    lsl_reception = Receive(port0)
+    lsl_reception = Receive(port0, 'name', 'openvibeSignal')  # or (port0, 'type', 'signal')
     port1 = Port()
-    port1.set_channels(['Channel 25'])
+    select = ChannelSelector(port0, port1, 'index', [25])
     port2 = Port()
-    port2.set_channels(port1.channels)
+    butter_filter = ButterFilter(port1, port2, 8, 12)
     port3 = Port()
-    port3.set_channels(port1.channels)
+    apply_function = ApplyFunction(port2, port3, lambda x: x**2)
     g_port3 = GroupOfPorts()
     port4 = Port()
     port4.set_channels(port1.channels)
 
-    nominal_srate = 250
-
-    select = ChannelSelector(port0, port1, ['Channel 25'])
-    butter_filter = ButterFilter(port1, port2, 8, 12, nominal_srate)
-    apply_function = ApplyFunction(port2, port3, lambda x: x**2)
     epoch = Epoching(port3, g_port3, 1)
     average = Averaging(g_port3, port4)
     lsl_send = Send(port4, 'mySignalEpoched', 1)
