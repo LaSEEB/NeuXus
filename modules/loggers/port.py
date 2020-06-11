@@ -2,7 +2,7 @@ import pandas as pd
 
 
 class Port:
-    def __init__(self):
+    def __init__(self, is_epoched=False):
         self.clear()
 
     def clear(self):
@@ -33,3 +33,31 @@ class Port:
         except AttributeError:
             if not self.data:
                 return True
+
+
+class GroupOfPorts(object):
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        self.ports = None
+        self.length = 0
+
+    def ready(self):
+        return self.ports and len(self.ports) > 0
+
+    def set(self, rows, timestamps, names):
+        self.length += 1
+        if not self.ports:
+            self.ports = []
+        new_port = Port(is_epoched=True)
+        new_port.set(rows, timestamps, names)
+        self.ports.append(new_port)
+
+    def set_from_df(self, df):
+        self.length += 1
+        if not self.ports:
+            self.ports = []
+        new_port = Port(is_epoched=True)
+        new_port.set_from_df(df)
+        self.ports.append(new_port)
