@@ -2,6 +2,7 @@ from scipy import signal
 import pandas as pd
 import numpy as np
 # import uuid
+from time import time
 from pylsl import (
     StreamInfo,
     StreamOutlet,
@@ -9,11 +10,6 @@ from pylsl import (
     resolve_stream,
     pylsl,
 )
-from time import (time, sleep)
-
-from port import Port
-
-import matplotlib.pyplot as plt
 
 
 class Send(object):
@@ -80,7 +76,7 @@ class Receive(object):
         max_samples (int): The maximum number of samples to return per call.
     """
 
-    def __init__(self, output_, sync="local", max_samples=1024):
+    def __init__(self, output_, sync="local", max_samples=1024 * 4):
         self.inlet = None
         self.labels = None
         self.sync = sync
@@ -93,7 +89,7 @@ class Receive(object):
     def connect(self):
         if not self.inlet:
             # resolve streams
-            streams = resolve_stream('type', 'signal')
+            streams = resolve_stream('name', 'openvibeSignal')
             if not streams:
                 return
             # Stream acquired
@@ -147,7 +143,7 @@ class ButterFilter(object):
         order (int): order to be applied on the butter filter (recommended < 16)
     """
 
-    def __init__(self, input_, output_, lowcut, highcut, fs, order=5):
+    def __init__(self, input_, output_, lowcut, highcut, fs, order=4):
         super().__init__()
         self.input = input_
         self.output = output_
@@ -182,7 +178,7 @@ class Epoching(object):
     """Cut a continuous signal in epoch of same duration
     Attributes:
         input_: get DataFrame and meta from input_ port
-        output_: output port
+        output_: output GroupOfPorts
     Args:
         duration: duration of epochs
     """
@@ -200,9 +196,12 @@ class Epoching(object):
 
     def update(self):
         # trigger points to the oldest data in persistence
+        #print('EPOCHING')
+        #print(self.trigger)
         if not self.trigger:
-            self.trigger = float(self.input.data.index.values[0])
+            self.trigger = float(self.input.data.index.values[1])
         df = self.input.data
+        #print(self.input.data.index.values)
 
         # if the new chunk complete an epoch:
         if float(df.index[-1]) >= self.trigger + self.duration:
@@ -216,77 +215,76 @@ class Epoching(object):
                 y = dfcon.iloc[lambda x: x.index >= self.trigger + self.duration]
                 self.trigger = self.trigger + self.duration
 
-            self.output.set_from_df(to_send)
+                self.output.set_from_df(to_send)
             self.persistent = y
         else:
             self.persistent = pd.concat([self.persistent, self.input.data])
-            print(len(self.persistent))
+        #print('END EPOCHING')
 
 
-if __name__ == '__main__':
+class Averaging(object):
+    """TO DO
+    Attributes:
+        input_: get DataFrame and meta from input_ port
+        output_: output GroupOfPorts
+    Args:
+        duration: duration of epochs
+    """
 
-    # for observation via plt
-    observe_plt = False
+    def __init__(self, input_, output_):
+        super().__init__()
+        self.input = input_
+        self.output = output_
 
-    # initialize the pipeline
-    port1 = Port()
-    lsl_reception = Receive(port1)
-    port2 = Port()
-    port2.set_channels(port1.channels)
-    port3 = Port()
-    port3.set_channels(port1.channels)
-    butter_filter = ButterFilter(port1, port2, 8, 40, 512)
-    epoch = Epoching(port2, port3, 1)
-    lsl_send = Send(port3, 'mySignalEpoched', 512)
-    lsl_send2 = Send(port2, 'mySignalFiltered', 512)
+        # TO DO terminate
 
-    # for dev
-    data = pd.DataFrame([])
-    data1 = pd.DataFrame([])
+    def update(self):
+        df = pd.DataFrame([] * 4)
+        for port in self.input.ports:
+            df = pd.concat([df, pd.DataFrame(port.data.mean(), columns=[port.data.index[-1]])], axis=1)
+        self.output.set_from_df(df.transpose())
 
-    # count iteration
-    it = 0
 
-    # working frequency for the loop
-    frequency = 5
-    t = 1 / frequency
+class ApplyFunction(object):
+    """TO DO
+    Attributes:
+        input_: get DataFrame and meta from input_ port
+        output_: output GroupOfPorts
+    Args:
+        duration: duration of epochs
+    """
 
-    # run the pipeline
-    while True:
-        calc_starttime = time()
+    def __init__(self, input_, output_, function, args=()):
+        super().__init__()
+        self.input = input_
+        self.output = output_
+        self.function = function
+        self.args = args
 
-        # clear port
-        port1.clear()
-        port2.clear()
-        port3.clear()
+        # TO DO terminate
 
-        lsl_reception.update()
-        if port1.ready():
-            butter_filter.update()
-        if port2.ready():
-            epoch.update()
-            lsl_send2.update()
-        if port3.ready():
-            lsl_send.update()
+    def update(self):
+        df = self.input.data
+        self.output.set_from_df(df.apply(self.function, args=self.args))
 
-        calc_endtime = time()
-        calc_time = calc_endtime - calc_starttime
 
-        print(f'{ int(calc_time / t * 1000) / 10} % for {port1.length} treated rows ({port1.length * len(port1.channels)} data)')
+class ChannelSelector(object):
+    """TO DO
+    Attributes:
+        input_: get DataFrame and meta from input_ port
+        output_: output GroupOfPorts
+    Args:
+        duration: duration of epochs
+    """
 
-        it += 1
+    def __init__(self, input_, output_, selected_channels):
+        super().__init__()
+        self.input = input_
+        self.output = output_
+        self.channels = selected_channels
 
-        # for dev
-        data1 = pd.concat([data1, port1.data])
-        data = pd.concat([data, port2.data])
-        if observe_plt and it == 150:
-            plt.plot(data.iloc[:, 0:1].values)
-            plt.plot(data1.iloc[:, 0:1].values)
-            plt.show()
+        # TO DO terminate
 
-        try:
-            sleep(t - calc_time)
-        except Exception as err:
-    
-            print(err)
-    # TO DO terminate
+    def update(self):
+        df = self.input.data
+        self.output.set_from_df(df[self.channels])
