@@ -1,6 +1,6 @@
 import sys
 
-from time import (time, sleep)
+from time import time
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -59,19 +59,13 @@ if __name__ == '__main__':
         port4.clear()
 
         lsl_reception.update()
-        if port0.ready():
-            select.update()
-        if port1.ready():
-            butter_filter.update()
-        if port2.ready():
-            apply_function.update()
-        if port3.ready():
-            epoch.update()
-            lsl_send2.update()
-        if g_port3.ready():
-            average.update()
-        if port4.ready():
-            lsl_send.update()
+        select.update()
+        butter_filter.update()
+        apply_function.update()
+        epoch.update()
+        lsl_send2.update()
+        average.update()
+        lsl_send.update()
 
         calc_endtime = time()
         calc_time = calc_endtime - calc_starttime

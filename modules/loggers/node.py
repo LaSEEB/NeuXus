@@ -59,7 +59,7 @@ class Send(object):
 
     def update(self):
         '''Send data found in input port'''
-        if not self.input.is_empty():
+        if self.input.ready():
             values = self.input.data.select_dtypes(
                 include=[self._dtypes[self.format]]).values
             stamps = self.input.data.index.values.astype(np.float64)
@@ -165,13 +165,14 @@ class ButterFilter(object):
         self.zi = np.zeros((len(self.input.channels), len_to_conserve))
 
     def update(self):
-        data = self.input.data
-        # filter
-        y, zf = signal.lfilter(self.b, self.a, data.transpose(), zi=self.zi)
-        # zf are the future initial condition
-        self.zi = zf
-        # update output port
-        self.output.set(np.array(y).transpose(), data.index, self.input.channels)
+        if self.input.ready():
+            data = self.input.data
+            # filter
+            y, zf = signal.lfilter(self.b, self.a, data.transpose(), zi=self.zi)
+            # zf are the future initial condition
+            self.zi = zf
+            # update output port
+            self.output.set(np.array(y).transpose(), data.index, self.input.channels)
 
 
 class Epoching(object):
@@ -195,31 +196,28 @@ class Epoching(object):
         # TO DO terminate
 
     def update(self):
-        # trigger points to the oldest data in persistence
-        #print('EPOCHING')
-        #print(self.trigger)
-        if not self.trigger:
-            self.trigger = float(self.input.data.index.values[1])
-        df = self.input.data
-        #print(self.input.data.index.values)
+        if self.input.ready():
+            # trigger points to the oldest data in persistence
+            if not self.trigger:
+                self.trigger = float(self.input.data.index.values[1])
+            df = self.input.data
 
-        # if the new chunk complete an epoch:
-        if float(df.index[-1]) >= self.trigger + self.duration:
-            # number of epoch that can be extracted
-            iter_ = int((float(df.index[-1]) - self.trigger) / self.duration)
-            dfcon = pd.concat([self.persistent, self.input.data])
+            # if the new chunk complete an epoch:
+            if float(df.index[-1]) >= self.trigger + self.duration:
+                # number of epoch that can be extracted
+                iter_ = int((float(df.index[-1]) - self.trigger) / self.duration)
+                dfcon = pd.concat([self.persistent, self.input.data])
 
-            # TO DO treat the case of a working frequency slower than epoching (ie i > 1)
-            for i in range(iter_):
-                to_send = dfcon[lambda x: x.index < self.trigger + self.duration]
-                y = dfcon.iloc[lambda x: x.index >= self.trigger + self.duration]
-                self.trigger = self.trigger + self.duration
+                # TO DO treat the case of a working frequency slower than epoching (ie i > 1)
+                for i in range(iter_):
+                    to_send = dfcon[lambda x: x.index < self.trigger + self.duration]
+                    y = dfcon.iloc[lambda x: x.index >= self.trigger + self.duration]
+                    self.trigger = self.trigger + self.duration
 
-                self.output.set_from_df(to_send)
-            self.persistent = y
-        else:
-            self.persistent = pd.concat([self.persistent, self.input.data])
-        #print('END EPOCHING')
+                    self.output.set_from_df(to_send)
+                self.persistent = y
+            else:
+                self.persistent = pd.concat([self.persistent, self.input.data])
 
 
 class Averaging(object):
@@ -239,10 +237,11 @@ class Averaging(object):
         # TO DO terminate
 
     def update(self):
-        df = pd.DataFrame([] * 4)
-        for port in self.input.ports:
-            df = pd.concat([df, pd.DataFrame(port.data.mean(), columns=[port.data.index[-1]])], axis=1)
-        self.output.set_from_df(df.transpose())
+        if self.input.ready():
+            df = pd.DataFrame([] * 4)
+            for port in self.input.ports:
+                df = pd.concat([df, pd.DataFrame(port.data.mean(), columns=[port.data.index[-1]])], axis=1)
+            self.output.set_from_df(df.transpose())
 
 
 class ApplyFunction(object):
@@ -264,8 +263,9 @@ class ApplyFunction(object):
         # TO DO terminate
 
     def update(self):
-        df = self.input.data
-        self.output.set_from_df(df.apply(self.function, args=self.args))
+        if self.input.ready():
+            df = self.input.data
+            self.output.set_from_df(df.apply(self.function, args=self.args))
 
 
 class ChannelSelector(object):
@@ -286,5 +286,6 @@ class ChannelSelector(object):
         # TO DO terminate
 
     def update(self):
-        df = self.input.data
-        self.output.set_from_df(df[self.channels])
+        if self.input.ready():
+            df = self.input.data
+            self.output.set_from_df(df[self.channels])
