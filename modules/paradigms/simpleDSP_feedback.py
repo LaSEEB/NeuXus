@@ -43,15 +43,8 @@ if __name__ == '__main__':
     # for dev
     data = pd.DataFrame([])
     data1 = pd.DataFrame([])
-
-    las_ = 0
-
     # count iteration
     it = 0
-
-    # working frequency for the loop
-    frequency = 10
-    t = 1 / frequency
 
     # run the pipeline
     while True:
@@ -83,11 +76,10 @@ if __name__ == '__main__':
         calc_endtime = time()
         calc_time = calc_endtime - calc_starttime
 
-        print(f'{ int(calc_time / t * 1000) / 10}% for {port1.length} treated rows ({port1.length * len(port1.channels)} data)')
-
-        it += 1
+        print(f'{ int(calc_time* 1000)}ms for {port1.length} treated rows ({port1.length * len(port1.channels)} data)')
 
         # for dev
+        it += 1
         data1 = pd.concat([data1, port1.data])
         data = pd.concat([data, port2.data])
         if observe_plt and it == 150:
@@ -95,9 +87,8 @@ if __name__ == '__main__':
             plt.plot(data1.iloc[:, 0:1].values)
             plt.show()
 
-        try:
-            d = 4
-            sleep(t - calc_time)
-        except Exception as err:
-            print(err)
+        #try:
+        #    sleep(t - calc_time)
+        #except Exception as err:
+        #    print(err)
     # TO DO terminate
