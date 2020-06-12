@@ -27,21 +27,18 @@ if __name__ == '__main__':
     butter_filter = ButterFilter(port1, port2, 8, 12)
     port3 = Port()
     apply_function = ApplyFunction(port2, port3, lambda x: x**2)
+    lsl_send2 = Send(port3, 'mySignalFiltered')
     port4 = Port()
-    port4.set_channels(port1.channels)
-    port5 = Port()
-    port5.set_channels(port1.channels)
-
     epoch = Epoching(port3, port4, 1)
+    port5 = Port()
     average = Averaging(port4, port5)
-    lsl_send = Send(port5, 'mySignalEpoched', 1)
-    lsl_send2 = Send(port3, 'mySignalFiltered', nominal_srate)
+    lsl_send = Send(port5, 'mySignalEpoched')
 
-    # for dev
+    '''# for dev
     data = pd.DataFrame([])
     data1 = pd.DataFrame([])
     # count iteration
-    it = 0
+    it = 0'''
 
     # run the pipeline
     while True:

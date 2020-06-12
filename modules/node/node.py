@@ -19,13 +19,13 @@ class Send(object):
 
     _dtypes = {"double64": np.number, "string": np.object}
 
-    def __init__(self, input_, name, frequency, type_="signal", format="double64", uuid_=None):
+    def __init__(self, input_, name, type_="signal", format="double64", uuid_=None):
         self.name = name
         self.type = type_
         self.format = format
-        self.frequency = frequency
         self.outlet = None
         self.input = input_
+        self.frequency = self.input.frequency
         if not uuid_:
             uuid_ = str(uuid.uuid4())
         self.uuid = uuid_
@@ -45,7 +45,6 @@ class Send(object):
                 self.uuid
             )
             channels = info.desc().append_child("channels")
-            print('output' + str(self.input.channels))
             for label in self.input.channels:
                 channels.append_child("channel")\
                     .append_child_value("label", str(label))\
@@ -200,8 +199,8 @@ class Epoching(object):
         self.output = output_
         self.duration = duration
 
-        # self.output.set_frequency(1 / duration)
-        # self.output.set_channels(self.input.channels)
+        self.output.set_frequency(1 / duration)
+        self.output.set_channels(self.input.channels)
 
         self.persistent = pd.DataFrame([], [], self.input.channels)
         self.trigger = None
@@ -245,6 +244,9 @@ class Averaging(object):
         super().__init__()
         self.input = input_
         self.output = output_
+
+        self.output.set_frequency(self.input.frequency)
+        self.output.set_channels(self.input.channels)
 
         # TO DO terminate
 
