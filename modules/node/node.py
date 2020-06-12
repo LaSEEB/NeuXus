@@ -57,10 +57,10 @@ class Send(object):
 
     def update(self):
         '''Send data found in input port'''
-        if self.input.ready():
-            values = self.input.data.select_dtypes(
+        for chunk in self.input:
+            values = chunk.select_dtypes(
                 include=[self._dtypes[self.format]]).values
-            stamps = self.input.data.index.values.astype(np.float64)
+            stamps = chunk.index.values.astype(np.float64)
             for row, stamp in zip(values, stamps):
                 self.outlet.push_sample(row, stamp)
 
@@ -132,7 +132,8 @@ class Receive(object):
                 elif self.sync == "network":
                     stamps = stamps + self.inlet.time_correction() + self.offset
                 # stamps = pd.to_datetime(stamps, format=None)
-            self.output.set(values, stamps, self.channels)
+            if len(stamps) > 0:
+                self.output.set(values, stamps, self.channels)
         else:
             return
 
@@ -175,14 +176,13 @@ class ButterFilter(object):
         self.zi = np.zeros((len(self.input.channels), len_to_conserve))
 
     def update(self):
-        if self.input.ready():
-            data = self.input.data
+        for chunk in self.input:
             # filter
-            y, zf = signal.lfilter(self.b, self.a, data.transpose(), zi=self.zi)
+            y, zf = signal.lfilter(self.b, self.a, chunk.transpose(), zi=self.zi)
             # zf are the future initial condition
             self.zi = zf
             # update output port
-            self.output.set(np.array(y).transpose(), data.index, self.input.channels)
+            self.output.set(np.array(y).transpose(), chunk.index, self.input.channels)
 
 
 class Epoching(object):
@@ -209,28 +209,27 @@ class Epoching(object):
         # TO DO terminate
 
     def update(self):
-        if self.input.ready():
+        for chunk in self.input:
             # trigger points to the oldest data in persistence
             if not self.trigger:
-                self.trigger = float(self.input.data.index.values[1])
-            df = self.input.data
+                self.trigger = float(chunk.index.values[1])
 
             # if the new chunk complete an epoch:
-            if float(df.index[-1]) >= self.trigger + self.duration:
+            if float(chunk.index[-1]) >= self.trigger + self.duration:
                 # number of epoch that can be extracted
-                iter_ = int((float(df.index[-1]) - self.trigger) / self.duration)
-                dfcon = pd.concat([self.persistent, self.input.data])
+                iter_ = int((float(chunk.index[-1]) - self.trigger) / self.duration)
+                dfcon = pd.concat([self.persistent, chunk])
 
                 # TO DO treat the case of a working frequency slower than epoching (ie i > 1)
                 for i in range(iter_):
-                    to_send = dfcon[lambda x: x.index < self.trigger + self.duration]
+                    epoch = dfcon[lambda x: x.index < self.trigger + self.duration]
                     y = dfcon.iloc[lambda x: x.index >= self.trigger + self.duration]
                     self.trigger = self.trigger + self.duration
 
-                    self.output.set_from_df(to_send)
+                    self.output.set_from_df(epoch)
                 self.persistent = y
             else:
-                self.persistent = pd.concat([self.persistent, self.input.data])
+                self.persistent = pd.concat([self.persistent, chunk])
 
 
 class Averaging(object):
@@ -250,11 +249,8 @@ class Averaging(object):
         # TO DO terminate
 
     def update(self):
-        if self.input.ready():
-            df = pd.DataFrame([] * 4)
-            for port in self.input.ports:
-                df = pd.concat([df, pd.DataFrame(port.data.mean(), columns=[port.data.index[-1]])], axis=1)
-            self.output.set_from_df(df.transpose())
+        for epoch in self.input:
+            self.output.set_from_df(pd.DataFrame(epoch.mean(), columns=[epoch.index[-1]]).transpose())
 
 
 class ApplyFunction(object):
@@ -279,9 +275,8 @@ class ApplyFunction(object):
         # TO DO terminate
 
     def update(self):
-        if self.input.ready():
-            df = self.input.data
-            self.output.set_from_df(df.apply(self.function, args=self.args))
+        for chunk in self.input:
+            self.output.set_from_df(chunk.apply(self.function, args=self.args))
 
 
 class ChannelSelector(object):
@@ -309,9 +304,8 @@ class ChannelSelector(object):
         self.selected = selected
 
     def update(self):
-        if self.input.ready():
-            df = self.input.data
+        for chunk in self.input:
             if self.mode == 'name':
-                self.output.set_from_df(df[self.selected])
+                self.output.set_from_df(chunk[self.selected])
             elif self.mode == 'index':
-                self.output.set_from_df(df.iloc[:, self.selected])
+                self.output.set_from_df(chunk.iloc[:, self.selected])
