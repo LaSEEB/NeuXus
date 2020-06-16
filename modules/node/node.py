@@ -21,7 +21,7 @@ class Node(ABC):
             pass
 
 
-class Send(Node):
+class LslSend(Node):
     """Send to a LSL stream.
     Attributes:
         i (Port): Default data input, expects DataFrame.
@@ -79,7 +79,7 @@ class Send(Node):
                 self.outlet.push_sample(row, stamp)
 
 
-class Receive(Node):
+class LslReceive(Node):
     """Receive from a LSL stream.
     Attributes:
         output_: provides DataFrame and meta
@@ -257,7 +257,7 @@ class TimeBasedEpoching(Node):
                 self.persistent = pd.concat([self.persistent, chunk])
 
 
-class MarkerBasedEpoching(Node):
+class MarkerBasedSeparation(Node):
     """Cut a continuous signal in epoch of various duration coming from Markers
     Attributes:
         input_: get DataFrame and meta from input_ port
@@ -324,6 +324,66 @@ class MarkerBasedEpoching(Node):
                 # drop marker from markers_recived and update end_time and next_name
                 self.markers_received = self.markers_received.drop([end_time])
                 end_time, next_name = self.get_end_time()
+
+
+class StimulationBasedEpoching(Node):
+    """Cut a continuous signal in epoch of various duration coming from Markers
+    Attributes:
+        input_: get DataFrame and meta from input_ port
+        output_: output GroupOfPorts
+    Args:
+        duration: duration of epochs
+    """
+
+    def __init__(self, input_port, output_port, marker_input_port, stimulation, offset, duration):
+        Node.__init__(self, input_port, output_port)
+
+        self.marker_input = marker_input_port
+
+        self.output.set_parameters(
+            channels=self.input.channels,
+            frequency=self.input.frequency,
+            meta=self.input.meta)
+
+        self.stimulation = stimulation
+        self.duration = duration
+        self.offset = offset
+
+        # persitent is data of a non-complete epoch
+        self.persistent = pd.DataFrame([], [], self.input.channels)
+        self.markers_received = pd.DataFrame([], [], self.marker_input.channels)
+        # current_name is the name to add for current epoch
+        self.start_time = None
+        self.end_time = None
+
+        # TO DO terminate
+
+    def get_timing_from_marker(self):
+        for marker_df in self.marker_input:
+            for marker_index in marker_df.index:
+                name = marker_df.loc[marker_index].values[0]
+                if name == self.stimulation:
+                    start_time = marker_index + self.offset
+                    end_time = start_time + self.duration
+                    return (float(start_time), float(end_time))
+        return (None, None)
+
+    def update(self):
+        if not self.start_time:
+            self.start_time, self.end_time = self.get_timing_from_marker()
+
+        for chunk in self.input:
+            self.persistent = pd.concat([self.persistent, chunk])
+            if self.start_time and float(chunk.index[-1]) > self.end_time:
+                # get epoch
+                epoch1 = self.persistent.iloc[lambda x: x.index >= self.start_time]
+                epoch = epoch1.iloc[lambda x: x.index < self.end_time]
+                # the rest is stored in persistence
+                self.persistent = self.persistent.iloc[lambda x: x.index >= self.end_time]
+                # update the output
+                self.output.set_from_df(epoch)
+
+                self.start_time, self.end_time = None, None
 
 
 class Averaging(Node):
@@ -395,9 +455,13 @@ class ChannelSelector(Node):
         Node.__init__(self, input_port, output_port)
 
         assert mode in ['index', 'name']
+        if mode == 'index':
+            channels_name = [self.input.channels[i] for i in selected]
+        elif mode == 'name':
+            channels_name = selected
 
         self.output.set_parameters(
-            channels=selected,
+            channels=channels_name,
             frequency=self.input.frequency,
             meta=self.input.meta)
 

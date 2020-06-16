@@ -8,8 +8,7 @@ sys.path.append('.')
 sys.path.append('../..')
 
 from modules.port.port import Port
-from modules.node.node import (Send, Receive, ButterFilter, TimeBasedEpoching, Averaging, ApplyFunction, ChannelSelector, MarkerBasedEpoching)
-
+import modules.node.node as node
 
 if __name__ == '__main__':
 
@@ -19,12 +18,16 @@ if __name__ == '__main__':
     # initialize the pipeline
 
     m_port0 = Port()
-    lsl_marker_reception = Receive(m_port0, 'type', 'Markers')
+    lsl_marker_reception = node.LslReceive(m_port0, 'type', 'Markers')
     port0 = Port()
-    lsl_reception = Receive(port0, 'name', 'openvibeSignal')
+    lsl_reception = node.LslReceive(port0, 'name', 'openvibeSignal')
+    port1 = Port()
+    select = node.ChannelSelector(port0, port1, 'index', [24])
     port2 = Port()
-    epoch = MarkerBasedEpoching(port0, port2, m_port0)
-    lsl_send = Send(port2, 'mySignalEpoched')
+    epoch_right = node.StimulationBasedEpoching(port1, port2, m_port0, 770, 0.125, 1)
+    port3 = Port()
+    epoch_left = node.StimulationBasedEpoching(port1, port3, m_port0, 769, 0.125, 1)
+    lsl_send = node.LslSend(port2, 'mySignalEpoched')
 
     '''# for dev
     data = pd.DataFrame([])
@@ -40,11 +43,15 @@ if __name__ == '__main__':
             # clear port
             port0.clear()
             m_port0.clear()
+            port1.clear()
             port2.clear()
+            port3.clear()
 
             lsl_marker_reception.update()
             lsl_reception.update()
-            epoch.update()
+            select.update()
+            epoch_left.update()
+            epoch_right.update()
             lsl_send.update()
 
             calc_endtime = time()
@@ -60,6 +67,12 @@ if __name__ == '__main__':
                     plt.plot(data.iloc[:, 0:1].values)
                     plt.plot(data1.iloc[:, 0:1].values)
                     plt.show()"""
+            if len(port2._data) > 0:
+                plt.plot(port2._data[0].iloc[:, 0:1].values)
+                plt.show()
+            if len(port3._data) > 0:
+                plt.plot(port3._data[0].iloc[:, 0:1].values)
+                plt.show()
 
             #try:
             #    sleep(t - calc_time)
