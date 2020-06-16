@@ -1,12 +1,27 @@
 from scipy import signal
+from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
 import uuid
 from time import time
-from pylsl import (StreamInfo, StreamOutlet, StreamInlet, resolve_byprop, pylsl)
+from pylsl import (StreamInfo, StreamOutlet,
+                   StreamInlet, resolve_byprop, pylsl)
 
 
-class Send(object):
+class Node(ABC):
+    """Abstract class for Node objects with both input and output port"""
+
+    def __init__(self, input_port, output_port):
+        self.input = input_port
+        self.output = output_port
+
+    @abstractmethod
+    def update(self):
+        for chunk_or_epoch in self.input:
+            pass
+
+
+class Send(Node):
     """Send to a LSL stream.
     Attributes:
         i (Port): Default data input, expects DataFrame.
@@ -19,12 +34,12 @@ class Send(object):
 
     _dtypes = {"double64": np.number, "string": np.object}
 
-    def __init__(self, input_, name, type_="signal", format="double64", uuid_=None):
+    def __init__(self, input_port, name, type_="signal", format="double64", uuid_=None):
+        Node.__init__(self, input_port, None)
         self.name = name
         self.type = type_
         self.format = format
         self.outlet = None
-        self.input = input_
         self.frequency = self.input.frequency
         if not uuid_:
             uuid_ = str(uuid.uuid4())
@@ -64,7 +79,7 @@ class Send(object):
                 self.outlet.push_sample(row, stamp)
 
 
-class Receive(object):
+class Receive(Node):
     """Receive from a LSL stream.
     Attributes:
         output_: provides DataFrame and meta
@@ -73,7 +88,8 @@ class Receive(object):
         max_samples (int): The maximum number of samples to return per call.
     """
 
-    def __init__(self, output_, prop, value, sync="local", max_samples=1024 * 4, timeout=10.0):
+    def __init__(self, output_port, prop, value, sync="local", max_samples=1024 * 4, timeout=10.0):
+        Node.__init__(self, None, output_port)
         self.inlet = None
         self.labels = None
         self._prop = prop
@@ -83,13 +99,13 @@ class Receive(object):
         self.offset = time() - pylsl.local_clock()
         self._timeout = timeout
 
-        self.output = output_
         self.connect()
 
     def connect(self):
         if not self.inlet:
             # resolve streams
-            streams = resolve_byprop(self._prop, self._value, timeout=self._timeout)
+            streams = resolve_byprop(
+                self._prop, self._value, timeout=self._timeout)
             if not streams:
                 print('No streams found')
                 raise Exception
@@ -117,13 +133,15 @@ class Receive(object):
             print()
             print(self.meta)
 
-            self.output.set_channels(channels)
-            self.output.set_meta(self.meta)
-            self.output.set_frequency(info.nominal_srate())
+            self.output.set_parameters(
+                channels=channels,
+                frequency=info.nominal_srate(),
+                meta=self.meta)
 
     def update(self):
         if self.inlet:
-            values, stamps = self.inlet.pull_chunk(max_samples=self.max_samples)
+            values, stamps = self.inlet.pull_chunk(
+                max_samples=self.max_samples)
             if stamps:
                 stamps = np.array(stamps)
                 if self.sync == "local":
@@ -132,12 +150,15 @@ class Receive(object):
                     stamps = stamps + self.inlet.time_correction() + self.offset
                 # stamps = pd.to_datetime(stamps, format=None)
             if len(stamps) > 0:
-                self.output.set(values, stamps, self.channels)
+                if len(self.channels) > 0:
+                    self.output.set(values, stamps, self.channels)
+                else:
+                    self.output.set(values, stamps)
         else:
             return
 
 
-class ButterFilter(object):
+class ButterFilter(Node):
     """Bandpass filter for continuous signal
     Attributes:
         input_: get DataFrame and meta from input_ port
@@ -149,13 +170,13 @@ class ButterFilter(object):
         order (int): order to be applied on the butter filter (recommended < 16)
     """
 
-    def __init__(self, input_, output_, lowcut, highcut, order=4):
-        super().__init__()
-        self.input = input_
-        self.output = output_
+    def __init__(self, input_port, output_port, lowcut, highcut, order=4):
+        Node.__init__(self, input_port, output_port)
 
-        self.output.set_frequency(self.input.frequency)
-        self.output.set_channels(self.input.channels)
+        self.output.set_parameters(
+            channels=self.input.channels,
+            frequency=self.input.frequency,
+            meta=self.input.meta)
 
         fs = self.input.frequency
         nyq = 0.5 * fs
@@ -177,14 +198,16 @@ class ButterFilter(object):
     def update(self):
         for chunk in self.input:
             # filter
-            y, zf = signal.lfilter(self.b, self.a, chunk.transpose(), zi=self.zi)
+            y, zf = signal.lfilter(
+                self.b, self.a, chunk.transpose(), zi=self.zi)
             # zf are the future initial condition
             self.zi = zf
             # update output port
-            self.output.set(np.array(y).transpose(), chunk.index, self.input.channels)
+            self.output.set(np.array(y).transpose(),
+                            chunk.index, self.input.channels)
 
 
-class Epoching(object):
+class TimeBasedEpoching(Node):
     """Cut a continuous signal in epoch of same duration
     Attributes:
         input_: get DataFrame and meta from input_ port
@@ -193,14 +216,15 @@ class Epoching(object):
         duration: duration of epochs
     """
 
-    def __init__(self, input_, output_, duration):
-        super().__init__()
-        self.input = input_
-        self.output = output_
-        self.duration = duration
+    def __init__(self, input_port, output_port, frequency):
+        Node.__init__(self, input_port, output_port)
 
-        self.output.set_frequency(1 / duration)
-        self.output.set_channels(self.input.channels)
+        self.duration = 1 / frequency
+
+        self.output.set_parameters(
+            channels=self.input.channels,
+            frequency=frequency,
+            meta=self.input.meta)
 
         self.persistent = pd.DataFrame([], [], self.input.channels)
         self.trigger = None
@@ -211,15 +235,17 @@ class Epoching(object):
         for chunk in self.input:
             # trigger points to the oldest data in persistence
             if not self.trigger:
-                self.trigger = float(chunk.index.values[1])
+                self.trigger = float(chunk.index.values[0])
 
             # if the new chunk complete an epoch:
             if float(chunk.index[-1]) >= self.trigger + self.duration:
                 # number of epoch that can be extracted
-                iter_ = int((float(chunk.index[-1]) - self.trigger) / self.duration)
+                iter_ = int(
+                    (float(chunk.index[-1]) - self.trigger) / self.duration)
                 dfcon = pd.concat([self.persistent, chunk])
 
-                # TO DO treat the case of a working frequency slower than epoching (ie i > 1)
+                # TO DO treat the case of a working frequency slower than
+                # epoching (ie i > 1)
                 for i in range(iter_):
                     epoch = dfcon[lambda x: x.index < self.trigger + self.duration]
                     y = dfcon.iloc[lambda x: x.index >= self.trigger + self.duration]
@@ -231,7 +257,76 @@ class Epoching(object):
                 self.persistent = pd.concat([self.persistent, chunk])
 
 
-class Averaging(object):
+class MarkerBasedEpoching(Node):
+    """Cut a continuous signal in epoch of various duration coming from Markers
+    Attributes:
+        input_: get DataFrame and meta from input_ port
+        output_: output GroupOfPorts
+    Args:
+        duration: duration of epochs
+    """
+
+    def __init__(self, input_port, output_port, marker_input_port):
+        Node.__init__(self, input_port, output_port)
+
+        self.marker_input = marker_input_port
+
+        self.output.set_parameters(
+            channels=self.input.channels,
+            frequency=self.input.frequency,
+            meta=self.input.meta)
+
+        # persitent is data of a non-complete epoch
+        self.persistent = pd.DataFrame([], [], self.input.channels)
+        self.markers_received = pd.DataFrame([], [], self.marker_input.channels)
+        # current_name is the name to add for current epoch
+        self.current_name = 'first epoch'
+
+        # TO DO terminate
+
+    def get_end_time(self):
+        """Test if a new marker arrived and return its timestamp as end of last epoch
+        else return None
+        """
+        if len(self.markers_received) > 0:
+            # end_time of current epoch
+            end_time = float(self.markers_received.index.values[0])
+            name = self.markers_received.loc[end_time, self.marker_input.channels].values[0]
+        else:
+            end_time = None
+            name = None
+        return (end_time, name)
+
+    def update(self):
+        # concatenate all markers received
+        for marker in self.marker_input:
+            self.markers_received = pd.concat([self.markers_received, marker])
+
+        # initialize the end_time of current epoch and name of the next epoch
+        end_time, next_name = self.get_end_time()
+
+        for chunk in self.input:
+            self.persistent = pd.concat([self.persistent, chunk])
+            while end_time and float(chunk.index[-1]) > end_time:  # while the new chunk complete epochs do:
+                # get epoch
+                epoch = self.persistent[lambda x: x.index < end_time]
+                # the rest is stored in persistence
+                self.persistent = self.persistent.iloc[lambda x: x.index >= end_time]
+
+                # update the output
+                self.output.set_from_df(epoch, self.current_name)
+                print(epoch.meta)
+                print(epoch)
+
+                # update the new current epoch name
+                self.current_name = next_name
+
+                # drop marker from markers_recived and update end_time and next_name
+                self.markers_received = self.markers_received.drop([end_time])
+                end_time, next_name = self.get_end_time()
+
+
+class Averaging(Node):
     """TO DO
     Attributes:
         input_: get DataFrame and meta from input_ port
@@ -240,22 +335,23 @@ class Averaging(object):
         duration: duration of epochs
     """
 
-    def __init__(self, input_, output_):
-        super().__init__()
-        self.input = input_
-        self.output = output_
+    def __init__(self, input_port, output_port):
+        Node.__init__(self, input_port, output_port)
 
-        self.output.set_frequency(self.input.frequency)
-        self.output.set_channels(self.input.channels)
+        self.output.set_parameters(
+            channels=self.input.channels,
+            frequency=self.input.frequency,
+            meta=self.input.meta)
 
         # TO DO terminate
 
     def update(self):
         for epoch in self.input:
-            self.output.set_from_df(pd.DataFrame(epoch.mean(), columns=[epoch.index[-1]]).transpose())
+            self.output.set_from_df(pd.DataFrame(
+                epoch.mean(), columns=[epoch.index[-1]]).transpose())
 
 
-class ApplyFunction(object):
+class ApplyFunction(Node):
     """TO DO
     Attributes:
         input_: get DataFrame and meta from input_ port
@@ -264,12 +360,13 @@ class ApplyFunction(object):
         duration: duration of epochs
     """
 
-    def __init__(self, input_, output_, function, args=()):
-        self.input = input_
-        self.output = output_
+    def __init__(self, input_port, output_port, function, args=()):
+        Node.__init__(self, input_port, output_port)
 
-        self.output.set_frequency(self.input.frequency)
-        self.output.set_channels(self.input.channels)
+        self.output.set_parameters(
+            channels=self.input.channels,
+            frequency=self.input.frequency,
+            meta=self.input.meta)
 
         self.function = function
         self.args = args
@@ -281,7 +378,7 @@ class ApplyFunction(object):
             self.output.set_from_df(chunk.apply(self.function, args=self.args))
 
 
-class ChannelSelector(object):
+class ChannelSelector(Node):
     """TO DO
     Attributes:
         input_: get DataFrame and meta from input_ port
@@ -294,13 +391,15 @@ class ChannelSelector(object):
     or       ChannelSelector(port1, port2, 'name', ['Channel 2', 'Channel 4'])
     """
 
-    def __init__(self, input_, output_, mode, selected):
-        assert mode in ['index', 'name']
-        self.input = input_
-        self.output = output_
+    def __init__(self, input_port, output_port, mode, selected):
+        Node.__init__(self, input_port, output_port)
 
-        self.output.set_frequency(self.input.frequency)
-        self.output.set_channels(selected)
+        assert mode in ['index', 'name']
+
+        self.output.set_parameters(
+            channels=selected,
+            frequency=self.input.frequency,
+            meta=self.input.meta)
 
         self.mode = mode
         self.selected = selected

@@ -2,41 +2,49 @@ import pandas as pd
 
 
 class Port:
+    """Class for creating link between nodes, it shares the data between them
+    A port is called by iteration ie:
+    for chunk in my_port:
+        my_chunk_in_dataframe = chunk
+        ...
+    A port can either contain a chunk of a continuous signal (it means that there is only one iteration)
+    or epochs (several iterations)
+    To add data use set_from_df(my_df) or set(data, stamps, columns)"""
+
     def __init__(self, is_epoched=False):
         self.clear()
 
     def clear(self):
-        self.data = []
-        self.meta = {}
-        self.index = 0
-        # self.length = 0
+        """Clear all data from _data"""
+        self._data = []
 
-    def ready(self):
-        return len(self.data) > 0
-
-    def set_meta(self, meta={}):
+    def set_parameters(self, channels, frequency, meta={}):
+        """Set channels, samplingfrequency and meta data"""
+        self.channels = channels
+        self.frequency = frequency
         self.meta = meta
 
-    def set_frequency(self, freq):
-        self.frequency = freq
+    def set(self, rows, timestamps, columns=None):
+        """Set from raw data"""
+        if columns:
+            self._data.append(pd.DataFrame(rows, index=timestamps, columns=columns))
+        else:
+            self._data.append(pd.DataFrame(rows, index=timestamps))
 
-    def set_channels(self, channels):
-        self.channels = channels
-
-    def set(self, rows, timestamps, names):
-        # self.length = len(timestamps)
-        self.data.append(pd.DataFrame(rows, index=timestamps, columns=names))
-
-    def set_from_df(self, df):
-        # self.length = len(df)
-        self.data.append(df)
+    def set_from_df(self, df, name=None):
+        """Set from a DataFrame object"""
+        if name:
+            df.meta = str(name)
+        self._data.append(df)
 
     def __iter__(self):
-        self.index = 0
+        """Define iteration"""
+        self._index = 0
         return self
 
     def __next__(self):
-        if self.index == len(self.data):
+        """Define iteration"""
+        if self._index == len(self._data):
             raise StopIteration
-        self.index += 1
-        return self.data[self.index - 1]
+        self._index += 1
+        return self._data[self._index - 1]
