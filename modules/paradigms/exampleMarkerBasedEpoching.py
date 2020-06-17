@@ -4,18 +4,18 @@ sys.path.append('.')
 sys.path.append('../..')
 
 from modules.core.pipeline import run
-import modules.core.node as node
+from modules.nodes import *
 
 
 if __name__ == '__main__':
 
     # initialize the pipeline
-    lsl_marker_reception = node.LslReceive('type', 'Markers')
-    lsl_reception = node.LslReceive('name', 'openvibeSignal')
-    select = node.ChannelSelector(lsl_reception.output, 'index', [24])
-    epoch_right = node.StimulationBasedEpoching(select.output, lsl_marker_reception.output, 770, 0.125, 1)
-    epoch_left = node.StimulationBasedEpoching(select.output, lsl_marker_reception.output, 769, 0.125, 1)
-    lsl_send = node.LslSend(epoch_right.output, 'mySignalEpoched')
+    lsl_marker_reception = lsl.LslReceive('type', 'Markers')
+    lsl_reception = lsl.LslReceive('name', 'openvibeSignal')
+    select = select.ChannelSelector(lsl_reception.output, 'index', [24])
+    epoch_right = epoching.StimulationBasedEpoching(select.output, lsl_marker_reception.output, 770, 0.125, 1)
+    epoch_left = epoching.StimulationBasedEpoching(select.output, lsl_marker_reception.output, 769, 0.125, 1)
+    lsl_send = lsl.LslSend(epoch_right.output, 'mySignalEpoched')
 
     # run the pipeline
     run()
