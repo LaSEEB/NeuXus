@@ -1,3 +1,5 @@
+import sys
+
 from scipy import signal
 from abc import ABC, abstractmethod
 import pandas as pd
@@ -7,13 +9,20 @@ from time import time
 from pylsl import (StreamInfo, StreamOutlet,
                    StreamInlet, resolve_byprop, pylsl)
 
+sys.path.append('.')
+sys.path.append('../..')
 
-class Node(ABC):
+from modules.core.port import Port
+from modules.core.keepref import KeepRefsFromParent
+
+
+class Node(KeepRefsFromParent, ABC):
     """Abstract class for Node objects with both input and output port"""
 
-    def __init__(self, input_port, output_port):
+    def __init__(self, input_port):
+        super(Node, self).__init__()
         self.input = input_port
-        self.output = output_port
+        self.output = Port()
 
     @abstractmethod
     def update(self):
@@ -35,7 +44,7 @@ class LslSend(Node):
     _dtypes = {"double64": np.number, "string": np.object}
 
     def __init__(self, input_port, name, type_="signal", format="double64", uuid_=None):
-        Node.__init__(self, input_port, None)
+        Node.__init__(self, input_port)
         self.name = name
         self.type = type_
         self.format = format
@@ -88,8 +97,8 @@ class LslReceive(Node):
         max_samples (int): The maximum number of samples to return per call.
     """
 
-    def __init__(self, output_port, prop, value, sync="local", max_samples=1024 * 4, timeout=10.0):
-        Node.__init__(self, None, output_port)
+    def __init__(self, prop, value, sync="local", max_samples=1024 * 4, timeout=10.0):
+        Node.__init__(self, None)
         self.inlet = None
         self.labels = None
         self._prop = prop
@@ -170,8 +179,8 @@ class ButterFilter(Node):
         order (int): order to be applied on the butter filter (recommended < 16)
     """
 
-    def __init__(self, input_port, output_port, lowcut, highcut, order=4):
-        Node.__init__(self, input_port, output_port)
+    def __init__(self, input_port, lowcut, highcut, order=4):
+        Node.__init__(self, input_port)
 
         self.output.set_parameters(
             channels=self.input.channels,
@@ -216,8 +225,8 @@ class TimeBasedEpoching(Node):
         duration: duration of epochs
     """
 
-    def __init__(self, input_port, output_port, frequency):
-        Node.__init__(self, input_port, output_port)
+    def __init__(self, input_port, frequency):
+        Node.__init__(self, input_port)
 
         self.duration = 1 / frequency
 
@@ -266,8 +275,8 @@ class MarkerBasedSeparation(Node):
         duration: duration of epochs
     """
 
-    def __init__(self, input_port, output_port, marker_input_port):
-        Node.__init__(self, input_port, output_port)
+    def __init__(self, input_port, marker_input_port):
+        Node.__init__(self, input_port)
 
         self.marker_input = marker_input_port
 
@@ -335,8 +344,8 @@ class StimulationBasedEpoching(Node):
         duration: duration of epochs
     """
 
-    def __init__(self, input_port, output_port, marker_input_port, stimulation, offset, duration):
-        Node.__init__(self, input_port, output_port)
+    def __init__(self, input_port, marker_input_port, stimulation, offset, duration):
+        Node.__init__(self, input_port)
 
         self.marker_input = marker_input_port
 
@@ -395,8 +404,8 @@ class Averaging(Node):
         duration: duration of epochs
     """
 
-    def __init__(self, input_port, output_port):
-        Node.__init__(self, input_port, output_port)
+    def __init__(self, input_port):
+        Node.__init__(self, input_port)
 
         self.output.set_parameters(
             channels=self.input.channels,
@@ -420,8 +429,8 @@ class ApplyFunction(Node):
         duration: duration of epochs
     """
 
-    def __init__(self, input_port, output_port, function, args=()):
-        Node.__init__(self, input_port, output_port)
+    def __init__(self, input_port, function, args=()):
+        Node.__init__(self, input_port)
 
         self.output.set_parameters(
             channels=self.input.channels,
@@ -451,8 +460,8 @@ class ChannelSelector(Node):
     or       ChannelSelector(port1, port2, 'name', ['Channel 2', 'Channel 4'])
     """
 
-    def __init__(self, input_port, output_port, mode, selected):
-        Node.__init__(self, input_port, output_port)
+    def __init__(self, input_port, mode, selected):
+        Node.__init__(self, input_port)
 
         assert mode in ['index', 'name']
         if mode == 'index':

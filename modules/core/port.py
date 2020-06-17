@@ -1,7 +1,14 @@
+import sys
+
 import pandas as pd
 
+sys.path.append('.')
+sys.path.append('../..')
 
-class Port:
+from modules.core.keepref import KeepRefs
+
+
+class Port(KeepRefs):
     """Class for creating link between nodes, it shares the data between them
     A port is called by iteration ie:
     for chunk in my_port:
@@ -12,6 +19,7 @@ class Port:
     To add data use set_from_df(my_df) or set(data, stamps, columns)"""
 
     def __init__(self, is_epoched=False):
+        super(Port, self).__init__()
         self.clear()
 
     def clear(self):

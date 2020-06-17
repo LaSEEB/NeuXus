@@ -1,82 +1,22 @@
 import sys
 
-from time import time
-import matplotlib.pyplot as plt
-import pandas as pd
-
 sys.path.append('.')
 sys.path.append('../..')
 
-from modules.port.port import Port
-from modules.node.node import (Send, Receive, ButterFilter, Epoching, Averaging, ApplyFunction, ChannelSelector)
+from modules.core.pipeline import run
+import modules.core.node as node
 
 
 if __name__ == '__main__':
 
-    # for observation via plt
-    observe_plt = False
-
-    nominal_srate = 250
-
     # initialize the pipeline
-    port0 = Port()
-    lsl_reception = Receive(port0, 'name', 'openvibeSignal')  # or (port0, 'type', 'signal')
-    port1 = Port()
-    select = ChannelSelector(port0, port1, 'index', [24])
-    port2 = Port()
-    butter_filter = ButterFilter(port1, port2, 8, 12)
-    port3 = Port()
-    apply_function = ApplyFunction(port2, port3, lambda x: x**2)
-    lsl_send2 = Send(port3, 'mySignalFiltered')
-    port4 = Port()
-    epoch = Epoching(port3, port4, 1)
-    port5 = Port()
-    average = Averaging(port4, port5)
-    lsl_send = Send(port5, 'mySignalEpoched')
+    lsl_reception = node.LslReceive('name', 'openvibeSignal')  # or (port0, 'type', 'signal')
+    select = node.ChannelSelector(lsl_reception.output, 'index', [24])
+    butter_filter = node.ButterFilter(select.output, 8, 12)
+    apply_function = node.ApplyFunction(butter_filter.output, lambda x: x**2)
+    lsl_send2 = node.LslSend(apply_function.output, 'mySignalFiltered')
+    epoch = node.TimeBasedEpoching(apply_function.output, 1)
+    average = node.Averaging(epoch.output)
+    lsl_send = node.LslSend(average.output, 'mySignalEpoched')
 
-    '''# for dev
-    data = pd.DataFrame([])
-    data1 = pd.DataFrame([])
-    # count iteration
-    it = 0'''
-
-    # run the pipeline
-    while True:
-        calc_starttime = time()
-
-        # clear port
-        port0.clear()
-        port1.clear()
-        port2.clear()
-        port3.clear()
-        port4.clear()
-        port5.clear()
-
-        lsl_reception.update()
-        select.update()
-        butter_filter.update()
-        apply_function.update()
-        lsl_send2.update()
-        epoch.update()
-        average.update()
-        lsl_send.update()
-
-        calc_endtime = time()
-        calc_time = calc_endtime - calc_starttime
-
-        # print(f'{ int(calc_time* 1000)}ms for {port1.length} treated rows ({port1.length * len(port1.channels)} data)')
-
-        # for dev
-        """it += 1
-                                data1 = pd.concat([data1, port1.data])
-                                data = pd.concat([data, port2.data])
-                                if observe_plt and it == 150:
-                                    plt.plot(data.iloc[:, 0:1].values)
-                                    plt.plot(data1.iloc[:, 0:1].values)
-                                    plt.show()"""
-
-        #try:
-        #    sleep(t - calc_time)
-        #except Exception as err:
-        #    print(err)
-    # TO DO terminate
+    run()
