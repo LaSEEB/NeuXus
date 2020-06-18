@@ -9,53 +9,63 @@ from modules.core.node import Node
 
 
 class TimeBasedEpoching(Node):
-    """Cut a continuous signal in epoch of same duration
+    """Generates signal 'slices' or 'blocks' having a specified duration and interval
     Attributes:
         input_: get DataFrame and meta from input_ port
-        output_: output GroupOfPorts
+        output: output Port used to share data to other nodes
     Args:
-        duration: duration of epochs
+        input_port: Input signal received in block
+        duration: Length of epoched signal
+        interval: Time interval between two consecutive epochs for signal
     """
 
-    def __init__(self, input_port, frequency):
+    def __init__(self, input_port, duration, interval):
         Node.__init__(self, input_port)
 
-        self.duration = 1 / frequency
+        self.duration = duration
+        self.interval = interval
 
         self.output.set_parameters(
             channels=self.input.channels,
-            frequency=frequency,
+            frequency=1 / interval,
             meta=self.input.meta)
 
         self.persistent = pd.DataFrame([], [], self.input.channels)
         self.trigger = None
+        self.markers = []
 
         # TO DO terminate
 
+    def update_timing(self, min_time, max_time):
+        if not self.trigger:
+            self.trigger = min_time
+        while self.trigger < max_time:
+            self.markers.append((self.trigger, self.trigger + self.duration))
+            self.trigger += self.interval
+        print(self.markers)
+
     def update(self):
+        # update persistence
         for chunk in self.input:
-            # trigger points to the oldest data in persistence
-            if not self.trigger:
-                self.trigger = float(chunk.index.values[0])
+            self.persistent = pd.concat([self.persistent, chunk])
 
-            # if the new chunk complete an epoch:
-            if float(chunk.index[-1]) >= self.trigger + self.duration:
-                # number of epoch that can be extracted
-                iter_ = int(
-                    (float(chunk.index[-1]) - self.trigger) / self.duration)
-                dfcon = pd.concat([self.persistent, chunk])
+            # update markers received
+            self.update_timing(float(chunk.index.values[0]), float(chunk.index.values[-1]))
 
-                # TO DO treat the case of a working frequency slower than
-                # epoching (ie i > 1)
-                for i in range(iter_):
-                    epoch = dfcon[lambda x: x.index < self.trigger + self.duration]
-                    y = dfcon.iloc[lambda x: x.index >= self.trigger + self.duration]
-                    self.trigger = self.trigger + self.duration
-
+        if len(self.persistent) > 0:
+            for marker in self.markers.copy():
+                start_time, end_time = marker
+                if float(self.persistent.index[-1]) > end_time:
+                    # get epoch
+                    self.persistent = self.persistent.iloc[lambda x: x.index >= start_time]
+                    epoch = self.persistent.iloc[lambda x: x.index < end_time]
+                    # update the output
                     self.output.set_from_df(epoch)
-                self.persistent = y
-            else:
-                self.persistent = pd.concat([self.persistent, chunk])
+                    print(epoch)
+                    self.markers.remove(marker)
+
+        if len(self.markers) == 0:
+            self.persistent = pd.DataFrame([], [], self.input.channels)
 
 
 class MarkerBasedSeparation(Node):
@@ -152,7 +162,8 @@ class StimulationBasedEpoching(Node):
 
         # persitent is data of a non-complete epoch
         self.persistent = pd.DataFrame([], [], self.input.channels)
-        self.markers_received = pd.DataFrame([], [], self.marker_input.channels)
+
+        self.markers = []
         # current_name is the name to add for current epoch
         self.start_time = None
         self.end_time = None
@@ -160,28 +171,34 @@ class StimulationBasedEpoching(Node):
         # TO DO terminate
 
     def get_timing_from_marker(self):
+        markers = []
         for marker_df in self.marker_input:
             for marker_index in marker_df.index:
                 name = marker_df.loc[marker_index].values[0]
                 if name == self.stimulation:
                     start_time = marker_index + self.offset
                     end_time = start_time + self.duration
-                    return (float(start_time), float(end_time))
-        return (None, None)
+                    markers.append((float(start_time), float(end_time)))
+        return markers
 
     def update(self):
-        if not self.start_time:
-            self.start_time, self.end_time = self.get_timing_from_marker()
-
+        # update persistence
         for chunk in self.input:
             self.persistent = pd.concat([self.persistent, chunk])
-            if self.start_time and float(chunk.index[-1]) > self.end_time:
-                # get epoch
-                epoch1 = self.persistent.iloc[lambda x: x.index >= self.start_time]
-                epoch = epoch1.iloc[lambda x: x.index < self.end_time]
-                # the rest is stored in persistence
-                self.persistent = self.persistent.iloc[lambda x: x.index >= self.end_time]
-                # update the output
-                self.output.set_from_df(epoch)
 
-                self.start_time, self.end_time = None, None
+        # update markers received
+        self.markers = self.markers + self.get_timing_from_marker()
+
+        if len(self.persistent) > 0:
+            for marker in self.markers.copy():
+                start_time, end_time = marker
+                if float(self.persistent.index[-1]) > end_time:
+                    # get epoch
+                    self.persistent = self.persistent.iloc[lambda x: x.index >= start_time]
+                    epoch = self.persistent.iloc[lambda x: x.index < end_time]
+                    # update the output
+                    self.output.set_from_df(epoch)
+                    self.markers.remove(marker)
+
+        if len(self.markers) == 0:
+            self.persistent = pd.DataFrame([], [], self.input.channels)
