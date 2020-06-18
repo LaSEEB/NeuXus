@@ -17,7 +17,7 @@ Create a Marker stream of a scenario described in a xml file specified in parser
 Launch: python stimulator.py config.xml
 """
 
-VALID_TYPE = ['float32',  'double64', 'string',
+VALID_TYPE = ['float32', 'double64', 'string',
               'int32', 'int16', 'int8', 'int64']
 
 

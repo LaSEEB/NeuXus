@@ -17,7 +17,7 @@ Launch with unittest discover -v
 class TestConfig(unittest.TestCase):
 
     def test_open_a_file(self):
-        stim.Config('modules/stimulus/test/config1.xml')
+        stim.Config('test/config1.xml')
 
     def test_no_file_found(self):
         with self.assertRaises(stim.FileNotFound):
@@ -25,7 +25,7 @@ class TestConfig(unittest.TestCase):
 
     def test_invalid_xml(self):
         with self.assertRaises(stim.InvalidXml):
-            stim.Config('modules/stimulus/test/config7.xml')
+            stim.Config('test/config7.xml')
 
     def test_convert_function(self):
         self.assertIs(type(stim.get_type_function(
@@ -37,7 +37,7 @@ class TestConfig(unittest.TestCase):
         self.assertIs(type(stim.get_type_function('int64')(4567)), numpy.int64)
 
     def test_global_str(self):
-        config = stim.Config('modules/stimulus/test/config1.xml')
+        config = stim.Config('test/config1.xml')
         self.assertEqual(config.name, 'Test')
         self.assertEqual(config.number_of_trials, 20.0)
         self.assertEqual(config.type, 'string')
@@ -68,7 +68,7 @@ class TestConfig(unittest.TestCase):
             self.assertEqual(step.get_duration(), lj[i])
 
     def test_global_float(self):
-        config = stim.Config('modules/stimulus/test/config8.xml')
+        config = stim.Config('test/config8.xml')
         self.assertEqual(config.name, 'Test2')
         self.assertEqual(config.number_of_trials, 25.0)
         self.assertEqual(config.type, 'float32')
@@ -103,34 +103,34 @@ class TestConfig(unittest.TestCase):
         with self.assertRaisesRegex(stim.ConfigFileNotInAccordance,
                                     'An error occured when loading the config file:\n'
                                     'No classes implemented in config file, please add subsection \'classes\''):
-            stim.Config('modules/stimulus/test/config2.xml')
+            stim.Config('test/config2.xml')
 
     def test_no_init(self):
         with self.assertRaisesRegex(stim.ConfigFileNotInAccordance,
                                     'An error occured when loading the config file:\n'
                                     'No init implemented in config file, please add subsection \'init\''):
-            stim.Config('modules/stimulus/test/config3.xml')
+            stim.Config('test/config3.xml')
 
     def test_no_loop(self):
         with self.assertRaisesRegex(stim.ConfigFileNotInAccordance,
                                     'An error occured when loading the config file:\n'
                                     'No loop implemented in config file, please add subsection \'loop\''):
-            stim.Config('modules/stimulus/test/config4.xml')
+            stim.Config('test/config4.xml')
 
     def test_no_end(self):
         with self.assertRaisesRegex(stim.ConfigFileNotInAccordance,
                                     'An error occured when loading the config file:\n'
                                     'No end implemented in config file, please add subsection \'end\''):
-            stim.Config('modules/stimulus/test/config5.xml')
+            stim.Config('test/config5.xml')
 
     def test_invalid_value(self):
         with self.assertRaisesRegex(stim.ConfigFileNotInAccordance,
                                     'An error occured when loading the config file:\n'
                                     'm in subsection \'init\' is not a valid duration value'):
-            stim.Config('modules/stimulus/test/config6.xml')
+            stim.Config('test/config6.xml')
 
     def test_create_a_new_sequence(self):
-        scenario = stim.Config('modules/stimulus/test/config1.xml')
+        scenario = stim.Config('test/config1.xml')
         sequence = scenario.create_a_new_sequence()
         self.assertEqual(sequence.count('RIGHT ARROW'),
                          sequence.count('LEFT ARROW'))
