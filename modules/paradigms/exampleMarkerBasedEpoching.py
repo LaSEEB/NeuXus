@@ -14,8 +14,16 @@ if __name__ == '__main__':
     lsl_reception = lsl.LslReceive('name', 'openvibeSignal')
     select = select.ChannelSelector(lsl_reception.output, 'index', [24])
     epoch_right = epoching.StimulationBasedEpoching(select.output, lsl_marker_reception.output, 770, 0.125, 1)
+    epoch_right_average = epoch_function.Average(epoch_right.output)
+
     epoch_left = epoching.StimulationBasedEpoching(select.output, lsl_marker_reception.output, 769, 0.125, 1)
-    lsl_send = lsl.LslSend(epoch_right.output, 'mySignalEpoched')
+
+    def my_function(x):
+        return x + epoch_right_average.value
+
+    epoch_left_f = function.ApplyFunction(epoch_left.output, my_function)
+
+    lsl_send = lsl.LslSend(epoch_left_f.output, 'mySignalEpoched')
 
     # run the pipeline
     run()

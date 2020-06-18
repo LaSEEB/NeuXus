@@ -25,9 +25,13 @@ class Average(Node):
             frequency=self.input.frequency,
             meta=self.input.meta)
 
+        self.value = 0
+
         # TO DO terminate
 
     def update(self):
         for epoch in self.input:
+            mean = epoch.mean()
             self.output.set_from_df(pd.DataFrame(
-                epoch.mean(), columns=[epoch.index[-1]]).transpose())
+                mean, columns=[epoch.index[-1]]).transpose())
+            self.value = mean.values[0]
