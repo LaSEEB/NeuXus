@@ -22,6 +22,11 @@ if __name__ == '__main__':
     #bandpass filtering
     butter_filter = filter.ButterFilter(select.output, 8, 12)
 
+    # get baseline
+    baseline = epoching.StimulationBasedEpoching(butter_filter.output, lsl_marker_reception.output, 'baseline', 0, 3)
+    # average baseline
+    avg_baseline = epoch_function.Average(baseline.output)
+
     # Stimulation-based epoching. 4 second epochs for left:769 and right:770
     stim_epoch_right = epoching.StimulationBasedEpoching(butter_filter.output, lsl_marker_reception.output, 770, 0.5, 4)
     stim_epoch_left = epoching.StimulationBasedEpoching(butter_filter.output, lsl_marker_reception.output, 769, 0.5, 4)
@@ -38,9 +43,12 @@ if __name__ == '__main__':
     average_epoch_right = epoch_function.Average(square_epoch_right.output)
     average_epoch_left = epoch_function.Average(square_epoch_left.output)
 
-    #logarithmize
-    #log_epoch_right = function.ApplyFunction(average_epoch_right.output, lambda x: log(1+x))
-    #log_epoch_left = function.ApplyFunction(average_epoch_left.output, lambda x: log(1+x))
+    def relative_alpha(x):
+        return (x - avg_baseline.value) / avg_baseline.value * 100
+
+    # relative_alpha
+    log_epoch_right = function.ApplyFunction(average_epoch_right.output, relative_alpha)
+    log_epoch_left = function.ApplyFunction(average_epoch_left.output, relative_alpha)
 
     #feature vector
     #ToDo

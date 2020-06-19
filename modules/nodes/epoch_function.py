@@ -34,4 +34,4 @@ class Average(Node):
             mean = epoch.mean()
             self.output.set_from_df(pd.DataFrame(
                 mean, columns=[epoch.index[-1]]).transpose())
-            self.value = mean.values[0]
+            self.value = mean.values[0] # TO DO test with multiple columns
