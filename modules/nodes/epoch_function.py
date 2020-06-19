@@ -1,6 +1,7 @@
 import sys
 
 import pandas as pd
+import numpy as np
 
 sys.path.append('.')
 sys.path.append('../..')
@@ -25,7 +26,7 @@ class Average(Node):
             frequency=self.input.frequency,
             meta=self.input.meta)
 
-        self.value = 0
+        self.value = np.array([0] * len(self.input.channels))
 
         # TO DO terminate
 
@@ -34,4 +35,4 @@ class Average(Node):
             mean = epoch.mean()
             self.output.set_from_df(pd.DataFrame(
                 mean, columns=[epoch.index[-1]]).transpose())
-            self.value = mean.values[0] # TO DO test with multiple columns
+            self.value = np.array(mean.values)

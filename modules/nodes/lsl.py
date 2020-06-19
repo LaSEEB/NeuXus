@@ -139,6 +139,8 @@ class LslReceive(Node):
                     stamps += self.offset
                 elif self.sync == "network":
                     stamps = stamps + self.inlet.time_correction() + self.offset
+                elif self.sync == 'special':
+                    stamps = stamps
                 # stamps = pd.to_datetime(stamps, format=None)
             if len(stamps) > 0:
                 if len(self.channels) > 0:

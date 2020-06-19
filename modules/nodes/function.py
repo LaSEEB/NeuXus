@@ -15,7 +15,7 @@ class ApplyFunction(Node):
         duration: duration of epochs
     """
 
-    def __init__(self, input_port, function, args=()):
+    def __init__(self, input_port, function):
         Node.__init__(self, input_port)
 
         self.output.set_parameters(
@@ -24,10 +24,9 @@ class ApplyFunction(Node):
             meta=self.input.meta)
 
         self.function = function
-        self.args = args
 
         # TO DO terminate
 
     def update(self):
         for chunk in self.input:
-            self.output.set_from_df(chunk.apply(self.function, args=self.args))
+            self.output.set_from_df(chunk.apply(self.function, axis=1, raw=True))

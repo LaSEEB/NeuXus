@@ -10,7 +10,7 @@ from modules.nodes import *
 if __name__ == '__main__':
 
     # initialize the pipeline
-    lsl_reception = lsl.LslReceive('name', 'openvibeSignal', sync='special')  # or (port0, 'type', 'signal')
+    lsl_reception = lsl.LslReceive('name', 'openvibeSignal', sync='from0')  # or (port0, 'type', 'signal')
     select = select.ChannelSelector(lsl_reception.output, 'index', [24])
     butter_filter = filter.ButterFilter(select.output, 8, 12)
     apply_function = function.ApplyFunction(butter_filter.output, lambda x: x**2)

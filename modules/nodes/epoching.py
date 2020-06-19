@@ -42,7 +42,6 @@ class TimeBasedEpoching(Node):
         while self.trigger < max_time:
             self.markers.append((self.trigger, self.trigger + self.duration))
             self.trigger += self.interval
-        print(self.markers)
 
     def update(self):
         # update persistence
@@ -61,7 +60,6 @@ class TimeBasedEpoching(Node):
                     epoch = self.persistent.iloc[lambda x: x.index < end_time]
                     # update the output
                     self.output.set_from_df(epoch)
-                    print(epoch)
                     self.markers.remove(marker)
 
         if len(self.markers) == 0:
@@ -126,8 +124,6 @@ class MarkerBasedSeparation(Node):
 
                 # update the output
                 self.output.set_from_df(epoch, self.current_name)
-                print(epoch.meta)
-                print(epoch)
 
                 # update the new current epoch name
                 self.current_name = next_name
