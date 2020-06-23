@@ -133,7 +133,7 @@ class ReferenceChannel(Node):
             self.output.set_from_df(df)
 
 
-class CommonReferenceChannel(Node):
+class CommonAverageReference(Node):
     """Re-referencing the signal to common average reference consists in
     subtracting from each sample the average value of the samples of all
     electrodes at this time
@@ -154,11 +154,8 @@ class CommonReferenceChannel(Node):
 
     def update(self):
         for chunk in self.input:
-            print(chunk)
             to_substract = chunk.mean(axis=1)
-            print(to_substract)
             df = pd.DataFrame([])
             for chan in self.input.channels:
                 df[chan] = chunk.loc[:, chan] - to_substract
-            print(df)
             self.output.set_from_df(df)

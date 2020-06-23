@@ -21,10 +21,14 @@ class Average(Node):
     def __init__(self, input_port):
         Node.__init__(self, input_port)
 
+        assert self.input.is_epoched
+
         self.output.set_parameters(
             channels=self.input.channels,
-            frequency=self.input.frequency,
+            frequency=self.input.epoching_frequency,
             meta=self.input.meta)
+
+        self.output.set_non_epoched()
 
         self.value = np.array([0] * len(self.input.channels))
 

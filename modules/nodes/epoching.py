@@ -27,8 +27,11 @@ class TimeBasedEpoching(Node):
 
         self.output.set_parameters(
             channels=self.input.channels,
-            frequency=1 / interval,
+            frequency=self.input.frequency,
             meta=self.input.meta)
+
+        self.output.set_epoched(
+            epoching_frequency=1 / interval)
 
         self.persistent = pd.DataFrame([], [], self.input.channels)
         self.trigger = None
@@ -84,6 +87,9 @@ class MarkerBasedSeparation(Node):
             channels=self.input.channels,
             frequency=self.input.frequency,
             meta=self.input.meta)
+
+        self.output.set_epoched(
+            epoching_frequency=0)
 
         # persitent is data of a non-complete epoch
         self.persistent = pd.DataFrame([], [], self.input.channels)
@@ -152,6 +158,9 @@ class StimulationBasedEpoching(Node):
             frequency=self.input.frequency,
             meta=self.input.meta)
 
+        self.output.set_epoched(
+            epoching_frequency=0)
+
         self.stimulation = stimulation
         self.duration = duration
         self.offset = offset
@@ -193,5 +202,5 @@ class StimulationBasedEpoching(Node):
                     self.output.set_from_df(epoch)
                     self.markers.remove(marker)
 
-        # if len(self.markers) == 0:
-        #    self.persistent = pd.DataFrame([], [], self.input.channels)
+        if len(self.markers) == 0:
+            self.persistent = pd.DataFrame([], [], self.input.channels)

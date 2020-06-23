@@ -24,6 +24,10 @@ class Node(KeepRefsFromParent, ABC):
         self.input = input_port
         self.output = Port()
 
+        if self.input and self.input.is_epoched:
+            self.output.set_epoched(
+                epoching_frequency=self.input.epoching_frequency)
+
     @abstractmethod
     def update(self):
         for chunk_or_epoch in self.input:
