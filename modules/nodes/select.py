@@ -9,13 +9,12 @@ from modules.core.node import Node
 
 
 class ChannelSelector(Node):
-    """TO DO
+    """Select a subset of signal channels
     Attributes:
-        input_: get DataFrame and meta from input_ port
-        output_: output GroupOfPorts
+     - output (port): output port
     Args:
-        mode ('index' or 'name'): indicate the way to select data
-        selected (list): column to be selected
+     - mode ('index' or 'name'): indicate the way to select data
+     - selected (list): column to be selected
 
     example: ChannelSelector(port1, port2, 'index', [2, 4, 5])
     or       ChannelSelector(port1, port2, 'name', ['Channel 2', 'Channel 4'])
@@ -50,10 +49,10 @@ class SpatialFilter(Node):
     """Maps M inputs to N outputs by multiplying the each input vector with a matrix
     usually used after a ChannelSelector
     Attributes:
-     - output: output GroupOfPorts
+     - output (port): output GroupOfPorts
     Args:
-     - input: input port
-     - matrix: dictionnary with new channel name as keys and list of coefficients as values,
+     - input (port): input port
+     - matrix (dict): dictionnary with new channel name as keys and list of coefficients as values,
        list must be of the same length as input.channels
 
     example: SpatialFilter(input_port, matrix)
@@ -66,6 +65,7 @@ class SpatialFilter(Node):
     def __init__(self, input_port, matrix):
         Node.__init__(self, input_port)
 
+        # protected
         self._matrix = matrix
         self._channels = [*self._matrix.keys()]
 
@@ -82,15 +82,13 @@ class SpatialFilter(Node):
         for chunk in self.input:
             df = pd.DataFrame([])
             for chan in self._channels:
-                flag = True
+                flag = True  # use to first create the serie
                 for index, coef in enumerate(self._matrix[chan]):
                     # print(f'{index} columns with coef {coef}')
                     if flag:
-                        series = chunk.iloc[:, index] * coef
+                        serie = chunk.iloc[:, index] * coef
                         flag = False
                     else:
-                        series += chunk.iloc[:, index] * coef
-
-                df[chan] = series
+                        serie += chunk.iloc[:, index] * coef
+                df[chan] = serie
             self.output.set_from_df(df)
-
