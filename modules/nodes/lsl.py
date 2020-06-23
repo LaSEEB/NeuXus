@@ -118,6 +118,8 @@ class LslReceive(Node):
                     channel_name = channel.child_value("label")
                     channels.append(channel_name)
                     channel = channel.next_sibling()
+            if not channels:
+                channels = [f'C{i + 1}' for i in range(info.channel_count())]
             self.channels = channels
             print('Available channels:')
             print(*channels, sep='\n')

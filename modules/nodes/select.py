@@ -24,25 +24,23 @@ class ChannelSelector(Node):
         Node.__init__(self, input_port)
 
         assert mode in ['index', 'name']
+
+        # get channels
         if mode == 'index':
-            channels_name = [self.input.channels[i] for i in selected]
+            self.channels = [self.input.channels[i - 1] for i in selected]
         elif mode == 'name':
-            channels_name = selected
+            self.channels = selected
 
         self.output.set_parameters(
-            channels=channels_name,
+            channels=self.channels,
             frequency=self.input.frequency,
             meta=self.input.meta)
 
         self.mode = mode
-        self.selected = selected
 
     def update(self):
         for chunk in self.input:
-            if self.mode == 'name':
-                self.output.set_from_df(chunk[self.selected])
-            elif self.mode == 'index':
-                self.output.set_from_df(chunk.iloc[:, self.selected])
+            self.output.set_from_df(chunk[self.channels])
 
 
 class SpatialFilter(Node):
