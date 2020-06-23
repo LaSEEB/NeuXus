@@ -17,7 +17,8 @@ class ChannelSelector(Node):
      - selected (list): column to be selected
 
     example: ChannelSelector(port1, port2, 'index', [2, 4, 5])
-    or       ChannelSelector(port1, port2, 'name', ['Channel 2', 'Channel 4'])
+          or ChannelSelector(port1, port2, 'name', ['Channel 2', 'Channel 4'])
+
     """
 
     def __init__(self, input_port, mode, selected):
@@ -27,20 +28,18 @@ class ChannelSelector(Node):
 
         # get channels
         if mode == 'index':
-            self.channels = [self.input.channels[i - 1] for i in selected]
+            self._channels = [self.input.channels[i - 1] for i in selected]
         elif mode == 'name':
-            self.channels = selected
+            self._channels = selected
 
         self.output.set_parameters(
-            channels=self.channels,
+            channels=self._channels,
             frequency=self.input.frequency,
             meta=self.input.meta)
 
-        self.mode = mode
-
     def update(self):
         for chunk in self.input:
-            self.output.set_from_df(chunk[self.channels])
+            self.output.set_from_df(chunk[self._channels])
 
 
 class SpatialFilter(Node):
@@ -58,6 +57,7 @@ class SpatialFilter(Node):
         'OC2': [4, 0, -1, 0],
         'OC3': [0, -1, 2, 4]
     }
+
     """
 
     def __init__(self, input_port, matrix):
@@ -89,4 +89,47 @@ class SpatialFilter(Node):
                     else:
                         serie += chunk.iloc[:, index] * coef
                 df[chan] = serie
+            self.output.set_from_df(df)
+
+
+class ReferenceChannel(Node):
+    """Subtracts the value of the reference channel from all other channels
+    Attributes:
+     - output (port): output GroupOfPorts
+    Args:
+     - mode ('index' or 'name'): indicate the way to select data
+     - reference channel (str or int): column to be substracted
+
+    example: ReferenceChannel(input_port, 'index', 4)
+          or ReferenceChannel(input_port, 'name', 'Cz')
+
+    """
+
+    def __init__(self, input_port, mode, ref):
+        Node.__init__(self, input_port)
+
+        assert mode in ['index', 'name']
+
+        # get reference channel name
+        if mode == 'index':
+            self._ref = self.input.channels[ref - 1]
+        elif mode == 'name':
+            self._ref = ref
+
+        self._channels = self.input.channels.copy()
+        self._channels.remove(self._ref)
+        print(self.input.channels)
+        print(self._channels)
+
+        self.output.set_parameters(
+            channels=self._channels,
+            frequency=self.input.frequency,
+            meta=self.input.meta)
+
+    def update(self):
+        for chunk in self.input:
+            df = pd.DataFrame([])
+            to_substract = chunk.loc[:, self._ref]
+            for chan in self._channels:
+                df[chan] = chunk.loc[:, chan] - to_substract
             self.output.set_from_df(df)
