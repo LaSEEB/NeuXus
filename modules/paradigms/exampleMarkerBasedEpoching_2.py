@@ -10,8 +10,8 @@ from modules.nodes import *
 if __name__ == '__main__':
 
     # get LSL streams
-    lsl_marker_reception = lsl.LslReceive('type', 'Markers')
-    lsl_reception = lsl.LslReceive('name', 'openvibeSignal')
+    lsl_marker_reception = io.LslReceive('type', 'Markers')
+    lsl_reception = io.LslReceive('name', 'openvibeSignal')
 
     # select C3(no.8), C4(no.24) channels
     select = select.ChannelSelector(lsl_reception.output, 'index', [8, 24])
@@ -54,15 +54,8 @@ if __name__ == '__main__':
     #ToDo
 
     # send via lsl
-    lsl_send_right = lsl.LslSend(average_epoch_right.output, 'mySignalEpochedRight')
-    lsl_send_left = lsl.LslSend(average_epoch_left.output, 'mySignalEpochedLeft')
+    lsl_send_right = io.LslSend(average_epoch_right.output, 'mySignalEpochedRight')
+    lsl_send_left = io.LslSend(average_epoch_left.output, 'mySignalEpochedLeft')
 
     # run the pipeline
     run()
-    """
-    if len(port2._data) > 0:
-        plt.plot(port2._data[0].iloc[:, 0:1].values)
-        plt.show()
-    if len(port3._data) > 0:
-        plt.plot(port3._data[0].iloc[:, 0:1].values)
-        plt.show()"""

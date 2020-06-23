@@ -1,5 +1,4 @@
 import sys
-import numpy as np
 
 sys.path.append('.')
 sys.path.append('../..')
@@ -11,11 +10,11 @@ from modules.nodes import *
 if __name__ == '__main__':
 
     # initialize the pipeline
-    #lsl_marker_reception = lsl.LslReceive('type', 'Markers')
-    #lsl_reception = lsl.LslReceive('name', 'LiveAmpSN-054207-0168')
-    lsl_reception = lsl.LslReceive('name', 'openvibeSignal')
-    lsl_marker_reception = lsl.LslReceive('name', 'openvibeMarkers')
-    #lsl_reception = lsl.LslReceive('name', 'openvibeSignalLSL')
+    #lsl_marker_reception = io.LslReceive('type', 'Markers')
+    #lsl_reception = io.LslReceive('name', 'LiveAmpSN-054207-0168')
+    lsl_reception = io.LslReceive('name', 'openvibeSignal')
+    lsl_marker_reception = io.LslReceive('name', 'openvibeMarkers')
+    #lsl_reception = io.LslReceive('name', 'openvibeSignalLSL')
 
     select = select.ChannelSelector(lsl_reception.output, 'index', [7, 24])
 
@@ -31,18 +30,15 @@ if __name__ == '__main__':
 
     '''
     baseline_average = epoch_function.Average(baseline.output)
-
     
     def relative_alpha(x):
         return (x - baseline_average.value) / baseline_average.value * 100
-
-
     relative_band = function.ApplyFunction(average_epoch.output, relative_alpha)
     '''
 
-    lsl_send0 = lsl.LslSend(time_epoch.output, 'time_epoch')
-    lsl_send1 = lsl.LslSend(square_epoch.output, 'square_epoch')
-    lsl_send2 = lsl.LslSend(average_epoch.output, 'average_epoch_n')
+    lsl_send0 = io.LslSend(time_epoch.output, 'time_epoch')
+    lsl_send1 = io.LslSend(square_epoch.output, 'square_epoch')
+    lsl_send2 = io.LslSend(average_epoch.output, 'average_epoch_n')
     #lsl_send3 = lsl.LslSend(relative_band.output, 'relative_band')
 
 
