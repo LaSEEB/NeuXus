@@ -118,8 +118,6 @@ class ReferenceChannel(Node):
 
         self._channels = self.input.channels.copy()
         self._channels.remove(self._ref)
-        print(self.input.channels)
-        print(self._channels)
 
         self.output.set_parameters(
             channels=self._channels,
@@ -132,4 +130,35 @@ class ReferenceChannel(Node):
             to_substract = chunk.loc[:, self._ref]
             for chan in self._channels:
                 df[chan] = chunk.loc[:, chan] - to_substract
+            self.output.set_from_df(df)
+
+
+class CommonReferenceChannel(Node):
+    """Re-referencing the signal to common average reference consists in
+    subtracting from each sample the average value of the samples of all
+    electrodes at this time
+    Attributes:
+     - output (port): output GroupOfPorts
+
+    example: CommonReferenceChannel(input_port)
+
+    """
+
+    def __init__(self, input_port):
+        Node.__init__(self, input_port)
+
+        self.output.set_parameters(
+            channels=self.input.channels,
+            frequency=self.input.frequency,
+            meta=self.input.meta)
+
+    def update(self):
+        for chunk in self.input:
+            print(chunk)
+            to_substract = chunk.mean(axis=1)
+            print(to_substract)
+            df = pd.DataFrame([])
+            for chan in self.input.channels:
+                df[chan] = chunk.loc[:, chan] - to_substract
+            print(df)
             self.output.set_from_df(df)
