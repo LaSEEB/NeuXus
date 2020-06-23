@@ -160,9 +160,6 @@ class StimulationBasedEpoching(Node):
         self.persistent = pd.DataFrame([], [], self.input.channels)
 
         self.markers = []
-        # current_name is the name to add for current epoch
-        self.start_time = None
-        self.end_time = None
 
         # TO DO terminate
 
@@ -196,5 +193,5 @@ class StimulationBasedEpoching(Node):
                     self.output.set_from_df(epoch)
                     self.markers.remove(marker)
 
-        if len(self.markers) == 0:
-            self.persistent = pd.DataFrame([], [], self.input.channels)
+        # if len(self.markers) == 0:
+        #    self.persistent = pd.DataFrame([], [], self.input.channels)
