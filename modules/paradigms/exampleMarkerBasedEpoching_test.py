@@ -13,12 +13,14 @@ if __name__ == '__main__':
     # initialize the pipeline
     #lsl_marker_reception = io.LslReceive('type', 'Markers')
     #lsl_reception = io.LslReceive('name', 'LiveAmpSN-054207-0168')
-    lsl_reception = io.LslReceive('name', 'LiveAmpSN-054207-0168', sync='network')
+    #lsl_reception = io.LslReceive('name', 'LiveAmpSN-054207-0168', sync='network')
+    lsl_reception = io.LslReceive('type', 'EEG')
     #lsl_reception = io.LslReceive('name', 'openvibeSignal')
     lsl_marker_reception = io.LslReceive('name', 'openvibeMarkers')
     #lsl_reception = io.LslReceive('name', 'openvibeSignalLSL')
 
-    reref = select.ReferenceChannel(lsl_reception.output, 'index', 1)
+    #reref = select.ReferenceChannel(lsl_reception.output, 'index', 1)
+    reref = select.CommonAverageReference(lsl_reception.output)
 
     chans = select.ChannelSelector(reref.output, 'index', [1, 2, 3, 4])
 
