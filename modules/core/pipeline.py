@@ -1,8 +1,9 @@
 import sys
+import os
 
 from time import time
-import matplotlib.pyplot as plt
-import pandas as pd
+import psutil
+import logging
 
 sys.path.append('.')
 sys.path.append('../..')
@@ -12,17 +13,21 @@ import modules.core.node as node
 
 def run():
 
-    # for observation via plt
-    observe_plt = False
-    '''# for dev
-    data = pd.DataFrame([])
-    data1 = pd.DataFrame([])
-    # count iteration
-    it = 0'''
+    pid = os.getpid()
+    py = psutil.Process(pid)
+
+    logging.info('Run pipeline')
 
     # run the pipeline
     try:
         while True:
+            # print('CPU ', py.cpu_percent(interval=.0001), '%')
+            print('RAM ', int(100 * py.memory_percent()) / 100, '%')
+            '''
+            p = py.parents()
+            for p1 in p:
+                print(p1.cpu_percent(interval=.001))
+                print(p1.memory_percent())'''
             calc_starttime = time()
 
             for port in Port.get_instances():

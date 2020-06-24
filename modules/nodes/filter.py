@@ -2,11 +2,13 @@ import sys
 
 from scipy import signal
 import numpy as np
+import logging
 
 sys.path.append('.')
 sys.path.append('../..')
 
 from modules.core.node import Node
+from modules.core.registry import *
 
 
 class ButterFilter(Node):
@@ -23,6 +25,13 @@ class ButterFilter(Node):
 
     def __init__(self, input_port, lowcut, highcut, order=4):
         Node.__init__(self, input_port)
+
+        logging.info(f'Instanciate a ButterFilter with parameters:'
+                     f'\ninput_port {input_port}'
+                     f'\nlowcut {lowcut}'
+                     f'\nhighcut {highcut}'
+                     f'\norder {order}')
+        self._nb_iter = 0
 
         self.output.set_parameters(
             channels=self.input.channels,
@@ -48,6 +57,9 @@ class ButterFilter(Node):
 
     def update(self):
         for chunk in self.input:
+            if self._nb_iter < NB_ITER:
+                logging.debug('Input chunk of ButterFilter\n' + str(chunk.iloc[-NB_LINE - 1:-1, :]))
+                self._nb_iter += 1
             # filter
             y, zf = signal.lfilter(
                 self.b, self.a, chunk.transpose(), zi=self.zi)
