@@ -2,10 +2,9 @@ import sys
 
 import pandas as pd
 
-sys.path.append('.')
 sys.path.append('../..')
 
-from modules.core.node import Node
+from modules.node import Node
 
 
 class ChannelSelector(Node):

@@ -1,9 +1,8 @@
 import sys
 
-sys.path.append('.')
 sys.path.append('../..')
 
-from modules.core.node import Node
+from modules.node import Node
 
 
 class ApplyFunction(Node):

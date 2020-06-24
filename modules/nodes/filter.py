@@ -4,11 +4,10 @@ from scipy import signal
 import numpy as np
 import logging
 
-sys.path.append('.')
 sys.path.append('../..')
 
-from modules.core.node import Node
-from modules.core.registry import *
+from modules.node import Node
+from modules.registry import *
 
 
 class ButterFilter(Node):

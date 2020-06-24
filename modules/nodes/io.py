@@ -6,10 +6,9 @@ from time import time
 from pylsl import (StreamInfo, StreamOutlet,
                    StreamInlet, resolve_byprop, pylsl)
 
-sys.path.append('.')
 sys.path.append('../..')
 
-from modules.core.node import Node
+from modules.node import Node
 
 
 class LslSend(Node):

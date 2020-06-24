@@ -3,10 +3,9 @@ import sys
 import pandas as pd
 import numpy as np
 
-sys.path.append('.')
 sys.path.append('../..')
 
-from modules.core.node import Node
+from modules.node import Node
 
 
 class Average(Node):

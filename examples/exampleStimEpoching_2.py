@@ -8,6 +8,11 @@ from modules.nodes import *
 
 
 if __name__ == '__main__':
+    #numeric_level = getattr(logging, loglevel.upper(), None)
+    #if not isinstance(numeric_level, int):
+    #    raise ValueError('Invalid log level: %s' % loglevel)
+    logging.basicConfig(filename='../log/test.log', filemode='w', format='%(levelname)s %(asctime)s %(message)s', level='DEBUG')
+
 
     # get LSL streams
     lsl_marker_reception = io.LslReceive('type', 'Markers')

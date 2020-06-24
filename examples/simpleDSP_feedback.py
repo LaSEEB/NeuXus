@@ -1,15 +1,24 @@
 import sys
 
-sys.path.append('.')
-sys.path.append('../..')
+import logging
 
-from modules.core.pipeline import run
+sys.path.append('..')
+
+from modules.pipeline import run
 from modules.nodes import *
 
 
 if __name__ == '__main__':
+    # numeric_level = getattr(logging, loglevel.upper(), None)
+    # if not isinstance(numeric_level, int):
+    #    raise ValueError('Invalid log level: %s' % loglevel)
+    logging.basicConfig(
+        filename='../log/test.log',
+        filemode='w',
+        format='%(levelname)s %(asctime)s %(message)s',
+        level='DEBUG'
+    )
 
-    # initialize the pipeline
     lsl_reception = io.LslReceive('type', 'EEG')  # or (port0, 'type', 'signal')
     butter_filter = filter.ButterFilter(lsl_reception.output, 8, 12)
     apply_function = function.ApplyFunction(butter_filter.output, lambda x: x**2)
@@ -17,5 +26,4 @@ if __name__ == '__main__':
     epoch = epoching.TimeBasedEpoching(apply_function.output, 1, 0.5)
     average = epoch_function.Average(epoch.output)
     lsl_send = io.LslSend(average.output, 'mySignalEpoched')
-
     run()
