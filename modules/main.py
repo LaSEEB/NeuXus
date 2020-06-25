@@ -24,14 +24,12 @@ if __name__ == '__main__':
     parser.add_argument(
         "-l",
         "--loglevel",
-        choices=['DEBUG', 'INFO', 'crotte'],
+        choices=['DEBUG', 'INFO'],
         help="Specify the output format",
         default='INFO')
     args = parser.parse_args()
 
     numeric_level = getattr(logging, args.loglevel.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: %s' % args.loglevel)
 
     if args.file:
         file_path = str(datetime.now().strftime("%d-%m-%Y %Hh%M")) + '.log'
@@ -39,13 +37,13 @@ if __name__ == '__main__':
         logging.basicConfig(
             filename=file_path,
             filemode='w',
-            format='%(levelname)s %(asctime)s %(message)s',
-            level=numeric_level
-        )
+            format='[%(levelname)s] %(asctime)s %(message)s',
+            level=numeric_level)
     else:
         logging.basicConfig(
-            format='%(levelname)s %(message)s',
-            level=numeric_level
-        )
+            format='[%(levelname)s] %(message)s',
+            level=numeric_level)
+    # initialize the nodes
     exec(open(args.pipeline).read())
+    # run the pipeline
     run()

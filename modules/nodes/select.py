@@ -1,6 +1,9 @@
 import sys
 
 import pandas as pd
+import logging
+import yaml
+import json
 
 sys.path.append('../..')
 
@@ -48,27 +51,46 @@ class SpatialFilter(Node):
      - output (port): output GroupOfPorts
     Args:
      - input (port): input port
-     - matrix (dict): dictionnary with new channel name as keys and list of coefficients as values,
-       list must be of the same length as input.channels
+     - matrix (dict or str): dictionnary with new channel name as keys and list of coefficients as values,
+       list must be of the same length as input.channels or path to the matrix yaml file
 
-    example: SpatialFilter(input_port, matrix)
-    where matrix = {
-        'OC2': [4, 0, -1, 0],
-        'OC3': [0, -1, 2, 4]
-    }
+    example:
+      - SpatialFilter(input_port, '../example/my_matrix')
+        where my_matrix is the following yaml file:
+        --- # Matrix of coefficient for SpatialFilter
+        OC1: [1, 1, 0, 4e-9]
+        OC2: [4, 2, 4, -2]
+        ...
+      - SpatialFilter(input_port, matrix)
+        where matrix = {
+            'OC2': [4, 0, -1e-2, 0],
+            'OC3': [0, -1, 2, 4]
+        }
 
     """
 
     def __init__(self, input_port, matrix):
         Node.__init__(self, input_port)
 
+        if isinstance(matrix, str):
+            logging.debug(f'Got matrix from file {matrix}')
+            with open(matrix, 'r') as file:
+                matrix = yaml.load(file, Loader=yaml.FullLoader)
+            logging.debug(f'{matrix}')
+
         # protected
         self._matrix = matrix
         self._channels = [*self._matrix.keys()]
 
-        # verify that the size of _matrix is correct
+        string = f''
         for chan in self._channels:
+            # verify that the size of _matrix is correct
             assert len(self._matrix[chan]) == len(self.input.channels)
+            # convert to float (for format '8e-4')
+            self._matrix[chan] = [float(i) for i in self._matrix[chan]]
+            string += f'\n{chan}: {self._matrix[chan]}'
+
+        logging.info(f'matrix:{string}')
 
         self.output.set_parameters(
             channels=self._channels,
