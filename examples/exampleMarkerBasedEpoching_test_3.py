@@ -1,8 +1,7 @@
 import sys
 import numpy as np
 
-sys.path.append('.')
-sys.path.append('../..')
+sys.path.append('..')
 
 from modules.pipeline import run
 from modules.nodes import *
@@ -14,7 +13,7 @@ if __name__ == '__main__':
     #lsl_marker_reception = io.LslReceive('type', 'Markers')
     #lsl_reception = io.LslReceive('name', 'LiveAmpSN-054207-0168')
     #lsl_reception = io.LslReceive('name', 'LiveAmpSN-054207-0168', sync='network')
-    lsl_reception = io.LslReceive('type', 'EEG')
+    lsl_reception = io.LslReceive('type', 'signal')
     #lsl_reception = io.LslReceive('name', 'openvibeSignal')
     lsl_marker_reception = io.LslReceive('name', 'openvibeMarkers')
     #lsl_reception = io.LslReceive('name', 'openvibeSignalLSL')
