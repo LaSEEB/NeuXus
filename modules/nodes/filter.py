@@ -26,11 +26,10 @@ class ButterFilter(Node):
         Node.__init__(self, input_port)
 
         logging.info(f'Instanciate a ButterFilter with parameters:'
-                     f'\ninput_port {input_port}'
-                     f'\nlowcut {lowcut}'
-                     f'\nhighcut {highcut}'
-                     f'\norder {order}')
-        self._nb_iter = 0
+                     f'\n   input_port {input_port}'
+                     f'\n   lowcut {lowcut}'
+                     f'\n   highcut {highcut}'
+                     f'\n   order {order}')
 
         self.output.set_parameters(
             channels=self.input.channels,
@@ -42,7 +41,7 @@ class ButterFilter(Node):
         low = lowcut / nyq
         high = highcut / nyq
 
-        # calcuate a and b, properties of the Butter filter
+        # calculate a and b, properties of the Butter filter
         self.b, self.a = signal.butter(
             order,
             [low, high],
@@ -56,9 +55,6 @@ class ButterFilter(Node):
 
     def update(self):
         for chunk in self.input:
-            if self._nb_iter < NB_ITER:
-                logging.debug('Input chunk of ButterFilter\n' + str(chunk.iloc[-NB_LINE - 1:-1, :]))
-                self._nb_iter += 1
             # filter
             y, zf = signal.lfilter(
                 self.b, self.a, chunk.transpose(), zi=self.zi)

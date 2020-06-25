@@ -3,11 +3,11 @@ import sys
 import pandas as pd
 import logging
 import yaml
-import json
 
 sys.path.append('../..')
 
 from modules.node import Node
+from modules.registry import *
 
 
 class ChannelSelector(Node):
@@ -82,15 +82,17 @@ class SpatialFilter(Node):
         self._matrix = matrix
         self._channels = [*self._matrix.keys()]
 
-        string = f''
+        str_matix = f''
         for chan in self._channels:
             # verify that the size of _matrix is correct
             assert len(self._matrix[chan]) == len(self.input.channels)
             # convert to float (for format '8e-4')
             self._matrix[chan] = [float(i) for i in self._matrix[chan]]
-            string += f'\n{chan}: {self._matrix[chan]}'
+            str_matix += f'\n      {chan}: {self._matrix[chan]}'
 
-        logging.info(f'matrix:{string}')
+        logging.info(f'Instanciate a SpatialFilter with parameters:'
+                     f'\n   input_port {input_port}'
+                     f'\n   matrix {str_matix}')
 
         self.output.set_parameters(
             channels=self._channels,

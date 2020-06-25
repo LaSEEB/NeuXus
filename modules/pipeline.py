@@ -34,6 +34,7 @@ def run():
                 port.clear()
             for nods in Node.get_instances():
                 nods.update()
+                nods.update_to_log()
 
             calc_endtime = time()
             calc_time = calc_endtime - calc_starttime
