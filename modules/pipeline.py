@@ -22,7 +22,7 @@ def run():
     try:
         while True:
             # print('CPU ', py.cpu_percent(interval=.0001), '%')
-            print('RAM ', int(100 * py.memory_percent()) / 100, '%')
+            # print('RAM ', int(100 * py.memory_percent()) / 100, '%')
             '''
             p = py.parents()
             for p1 in p:
