@@ -2,13 +2,12 @@ import sys
 
 sys.path.append('..')
 
-from modules.nodes import (filter, io, select)
+from modules.nodes import (filter, io, select, epoching, epoch_function)
 
 lsl_reception = io.LslReceive('type', 'EEG')  # or (port0, 'type', 'signal')
-matrix = {
-        'OC2': [1, 1, 0, 1],
-        'OC3': [1, 0, 1, 1]}
 channel_selector = select.ChannelSelector(lsl_reception.output, 'index', [1, 2, 3, 4])
-spatial_filter = select.SpatialFilter(channel_selector.output, matrix=matrix)
-filtering = filter.ButterFilter(spatial_filter.output, 8, 12)
-lsl_send = io.LslSend(spatial_filter.output, 'spatial_filter')
+epoch = epoching.TimeBasedEpoching(channel_selector.output, 1, 0.25)
+stat = epoch_function.UnivariateStat(epoch.output, 'iqr', q1=0, q2=1)
+stat2 = epoch_function.UnivariateStat(epoch.output, 'range')
+lsl_send = io.LslSend(stat.output, 'stat')
+lsl_send2 = io.LslSend(stat2.output, 'stat2')
