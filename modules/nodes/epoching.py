@@ -36,6 +36,8 @@ class TimeBasedEpoching(Node):
         self.trigger = None
         self.markers = []
 
+        Node.log_instance(self, {'duration': self.duration, 'interval': self.interval})
+
         # TO DO terminate
 
     def update_timing(self, min_time, max_time):
@@ -95,6 +97,8 @@ class MarkerBasedSeparation(Node):
         self.markers_received = pd.DataFrame([], [], self.marker_input.channels)
         # current_name is the name to add for current epoch
         self.current_name = 'first epoch'
+
+        Node.log_instance(self, {'marker port': self.marker_input.id})
 
         # TO DO terminate
 
@@ -168,6 +172,13 @@ class StimulationBasedEpoching(Node):
         self.persistent = pd.DataFrame([], [], self.input.channels)
 
         self.markers = []
+
+        Node.log_instance(self, {
+            'marker port': self.marker_input.id,
+            'stimulation': self.stimulation,
+            'type stimulation': type(self.stimulation),
+            'offset': self.offset,
+            'duration': self.duration})
 
         # TO DO terminate
 

@@ -1,6 +1,7 @@
 import sys
 
 import numpy as np
+import logging
 import uuid
 from time import time
 from pylsl import (StreamInfo, StreamOutlet,
@@ -24,17 +25,19 @@ class LslSend(Node):
 
     _dtypes = {"double64": np.number, "string": np.object}
 
-    def __init__(self, input_port, name, type_="signal", format="double64", uuid_=None):
-        Node.__init__(self, input_port)
-        self.name = name
-        self.type = type_
-        self.format = format
+    def __init__(self, input_port, name, type="signal", format="double64", uuid_=None):
+        Node.__init__(self, input_port, False)
+        self._name = name
+        self._type = type
+        self._format = format
         self.outlet = None
-        self.frequency = self.input.frequency
+        self._frequency = self.input.frequency
         if not uuid_:
             uuid_ = str(uuid.uuid4())
         self.uuid = uuid_
         self.connect()
+
+        Node.log_instance(self, {'name': self._name, 'frequency': self._frequency, 'channels': self.input.channels})
 
     def connect(self):
         '''Create an outlet for streaming data'''
@@ -42,11 +45,11 @@ class LslSend(Node):
 
             # metadata
             info = StreamInfo(
-                self.name,
-                self.type,
+                self._name,
+                self._type,
                 len(self.input.channels),
-                self.frequency,
-                self.format,
+                self._frequency,
+                self._format,
                 self.uuid
             )
             channels = info.desc().append_child("channels")
@@ -63,7 +66,7 @@ class LslSend(Node):
         '''Send data found in input port'''
         for chunk in self.input:
             values = chunk.select_dtypes(
-                include=[self._dtypes[self.format]]).values
+                include=[self._dtypes[self._format]]).values
             stamps = chunk.index.values.astype(np.float64)
             for row, stamp in zip(values, stamps):
                 self.outlet.push_sample(row, stamp)
@@ -81,7 +84,6 @@ class LslReceive(Node):
     def __init__(self, prop, value, sync="local", max_samples=1024 * 4, timeout=10.0):
         Node.__init__(self, None)
         self.inlet = None
-        self.labels = None
         self._prop = prop
         self._value = value
         self.sync = sync
@@ -91,15 +93,18 @@ class LslReceive(Node):
 
         self.connect()
 
+        Node.log_instance(self, {'channels': self.channels, 'sampling frequency': self._frequency})
+
     def connect(self):
         if not self.inlet:
             # resolve streams
+            logging.info(f'Resolving streams with {self._prop} {self._value}')
             streams = resolve_byprop(
                 self._prop, self._value, timeout=self._timeout)
             if not streams:
-                print('No streams found')
+                logging.info('No stream found')
                 raise Exception
-            print('Stream acquired')
+            logging.info(f'{len(streams)} stream(s) acquired')
             # Stream acquired
             self.inlet = StreamInlet(streams[0])
             info = self.inlet.info()
@@ -120,14 +125,11 @@ class LslReceive(Node):
             if not channels:
                 channels = [f'{i + 1}' for i in range(info.channel_count())]
             self.channels = channels
-            print('Available channels:')
-            print(*channels, sep='\n')
-            print()
-            print(self.meta)
+            self._frequency = info.nominal_srate()
 
             self.output.set_parameters(
                 channels=channels,
-                frequency=info.nominal_srate(),
+                frequency=self._frequency,
                 meta=self.meta)
 
     def update(self):

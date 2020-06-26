@@ -4,6 +4,10 @@ from abc import ABC
 
 
 class KeepRefs(ABC):
+    """Abstract class for keeping the reference a class
+    Used for IterChunk, when creating an IterChunk, it adds
+    the new instance to the list of IterChunk
+    """
     __refs__ = defaultdict(list)
 
     def __init__(self):
@@ -12,6 +16,8 @@ class KeepRefs(ABC):
 
     @classmethod
     def get_instances(cls):
+        """Function to get instances of all the instance of the herited
+        class"""
         for inst_ref in cls.__refs__[cls]:
             inst = inst_ref()
             if inst is not None:
@@ -19,6 +25,10 @@ class KeepRefs(ABC):
 
 
 class KeepRefsFromParent(ABC):
+    """Abstract class for keeping the reference of Parent
+    Used for Node, when creating a subclass of Node, it adds
+    the new instance to the list of Nodes
+    """
     __refs__ = defaultdict(list)
 
     def __init__(self):
@@ -27,6 +37,8 @@ class KeepRefsFromParent(ABC):
 
     @classmethod
     def get_instances(cls):
+        """Function to get instances of all the instance that have the
+        current class as parent"""
         for inst_ref in cls.__refs__[cls]:
             inst = inst_ref()
             if inst is not None:

@@ -13,23 +13,16 @@ from modules.registry import *
 class ButterFilter(Node):
     """Bandpass filter for continuous signal
     Attributes:
-        input_: get DataFrame and meta from input_ port
-        output_: output port
+        output: output port
     Args:
-        lowcut (float): lowest frequence cut
-        highcut (float): highest frequence cut
-        fs (float): sampling frequence
+        input: get DataFrame and meta from input_ port
+        lowcut (float): lowest frequence cut in Hz
+        highcut (float): highest frequence cut in Hz
         order (int): order to be applied on the butter filter (recommended < 16)
     """
 
     def __init__(self, input_port, lowcut, highcut, order=4):
         Node.__init__(self, input_port)
-
-        logging.info(f'Instanciate a ButterFilter with parameters:'
-                     f'\n   input_port {input_port}'
-                     f'\n   lowcut {lowcut}'
-                     f'\n   highcut {highcut}'
-                     f'\n   order {order}')
 
         self.output.set_parameters(
             channels=self.input.channels,
@@ -42,7 +35,7 @@ class ButterFilter(Node):
         high = highcut / nyq
 
         # calculate a and b, properties of the Butter filter
-        self.b, self.a = signal.butter(
+        self._b, self._a = signal.butter(
             order,
             [low, high],
             analog=False,
@@ -50,16 +43,18 @@ class ButterFilter(Node):
             output='ba')
 
         # initial condition zi
-        len_to_conserve = max(len(self.a), len(self.b)) - 1
-        self.zi = np.zeros((len(self.input.channels), len_to_conserve))
+        len_to_conserve = max(len(self._a), len(self._b)) - 1
+        self._zi = np.zeros((len(self.input.channels), len_to_conserve))
+
+        Node.log_instance(self, {'lowcut': lowcut, 'highcut': highcut, 'order': order})
 
     def update(self):
         for chunk in self.input:
             # filter
             y, zf = signal.lfilter(
-                self.b, self.a, chunk.transpose(), zi=self.zi)
-            # zf are the future initial condition
-            self.zi = zf
+                self._b, self._a, chunk.transpose(), zi=self._zi)
+            # zf are the future initial conditions
+            self._zi = zf
             # update output port
             self.output.set(np.array(y).transpose(),
                             chunk.index, self.input.channels)

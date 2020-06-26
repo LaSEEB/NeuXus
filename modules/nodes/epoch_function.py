@@ -31,11 +31,16 @@ class Average(Node):
 
         self.value = np.array([0] * len(self.input.channels))
 
+        Node.log_instance(self, {'output frequency': self.input.epoching_frequency})
+
         # TO DO terminate
 
     def update(self):
         for epoch in self.input:
             mean = epoch.mean()
+            print(mean)
+            print(pd.DataFrame(
+                mean, columns=[epoch.index[-1]]).transpose())
             self.output.set_from_df(pd.DataFrame(
                 mean, columns=[epoch.index[-1]]).transpose())
             self.value = np.array(mean.values)

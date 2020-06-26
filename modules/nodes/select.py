@@ -39,6 +39,8 @@ class ChannelSelector(Node):
             frequency=self.input.frequency,
             meta=self.input.meta)
 
+        Node.log_instance(self, {'selected channels': self._channels})
+
     def update(self):
         for chunk in self.input:
             self.output.set_from_df(chunk[self._channels])
@@ -82,22 +84,20 @@ class SpatialFilter(Node):
         self._matrix = matrix
         self._channels = [*self._matrix.keys()]
 
-        str_matix = f''
+        str_matrix = f''
         for chan in self._channels:
             # verify that the size of _matrix is correct
             assert len(self._matrix[chan]) == len(self.input.channels)
             # convert to float (for format '8e-4')
             self._matrix[chan] = [float(i) for i in self._matrix[chan]]
-            str_matix += f'\n      {chan}: {self._matrix[chan]}'
-
-        logging.info(f'Instanciate a SpatialFilter with parameters:'
-                     f'\n   input_port {input_port}'
-                     f'\n   matrix {str_matix}')
+            str_matrix += f'\n      {chan}: {self._matrix[chan]}'
 
         self.output.set_parameters(
             channels=self._channels,
             frequency=self.input.frequency,
             meta=self.input.meta)
+
+        Node.log_instance(self, {'matrix': str_matrix})
 
     def update(self):
         for chunk in self.input:
@@ -147,6 +147,8 @@ class ReferenceChannel(Node):
             frequency=self.input.frequency,
             meta=self.input.meta)
 
+        Node.log_instance(self, {'reference': self._ref})
+
     def update(self):
         for chunk in self.input:
             df = pd.DataFrame([])
@@ -174,6 +176,8 @@ class CommonAverageReference(Node):
             channels=self.input.channels,
             frequency=self.input.frequency,
             meta=self.input.meta)
+
+        Node.log_instance(self, {})
 
     def update(self):
         for chunk in self.input:

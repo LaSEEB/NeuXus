@@ -12,15 +12,22 @@ from modules.node import Node
 
 
 def run():
+    """Function to run pipeline"""
 
     pid = os.getpid()
     py = psutil.Process(pid)
+
+    ports = IterChunks.get_instances()
+    logging.debug(f'Name  freq  epoch epochfreq channels')
+    for port in ports:
+        port.log_parameters()
 
     logging.info('Run pipeline')
 
     # run the pipeline
     try:
         while True:
+            logging.debug('New iteration')
             # print('CPU ', py.cpu_percent(interval=.0001), '%')
             # print('RAM ', int(100 * py.memory_percent()) / 100, '%')
             '''
