@@ -23,15 +23,15 @@
         <init>
                 <step>
                         <name>32769</name> <!-- ExperimentStart -->
-                        <duration>5</duration>
+                        <duration>2</duration>
                 </step>
                 <step>
                         <name>32775</name> <!-- BaselineStart -->
-                        <duration>20</duration>
+                        <duration>5</duration>
                 </step>
                 <step>
                         <name>32776</name> <!-- BaselineStop -->
-                        <duration>5</duration>
+                        <duration>2</duration>
                 </step>
         </init>
         <!-- The loop is repeated number_of_trials * nb_of_classes times -->
@@ -51,12 +51,12 @@
                 </step>
                 <step>
                         <name>781</name> <!-- FeedbackContinuous -->
-                        <duration>3.75</duration>
+                        <duration>9.75</duration>
                 </step>
                 <step>
                         <name>800</name> <!-- End of Trial -->
-                        <min_duration>2</min_duration>
-                        <max_duration>2.75</max_duration>
+                        <min_duration>10</min_duration>
+                        <max_duration>10.75</max_duration>
                 </step>
         </loop>
         <!-- End of the experiment -->
