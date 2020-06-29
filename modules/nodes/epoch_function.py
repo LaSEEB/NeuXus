@@ -2,6 +2,7 @@ import sys
 
 import pandas as pd
 import numpy as np
+from scipy import signal
 
 sys.path.append('../..')
 
@@ -44,16 +45,21 @@ class Average(Node):
 
 
 class UnivariateStat(Node):
-    """TO DO
+    """Mean, Variance, Median, etc. on the incoming epoched Signal
+    perform calculation on each coming epoch and saved last value in value
+    attribute
     Attributes:
-        input_: get DataFrame and meta from input_ port
-        output_: output GroupOfPorts
+      - output: output GroupOfPorts
+      - value: last value calculated (on the last epoch come)
     Args:
-        duration: duration of epochs
+      - input (Port): port of incoming data
+      - stat (str):
     """
 
     def __init__(self, input_port, stat, q=None, q1=None, q2=None):
         Node.__init__(self, input_port)
+
+        assert self.input.is_epoched
 
         assert stat in ['mean', 'min', 'max', 'range', 'std', 'median', 'quantile', 'iqr']
         self._stat = stat
@@ -109,3 +115,51 @@ class UnivariateStat(Node):
             self.output.set_from_df(pd.DataFrame(
                 stat, columns=[epoch.index[-1]]).transpose())
             self.value = np.array(stat.values)
+
+
+class Windowing(Node):
+    """Mean, Variance, Median, etc. on the incoming epoched Signal
+    perform calculation on each coming epoch and saved last value in value
+    attribute
+    Attributes:
+      - output: output GroupOfPorts
+      - value: last value calculated (on the last epoch come)
+    Args:
+      - input (Port): port of incoming data
+      - stat (str):
+    """
+
+    def __init__(self, input_port, window):
+        Node.__init__(self, input_port)
+
+        assert self.input.is_epoched
+
+        assert window in ['blackman', 'hanning', 'hamming', 'triang']
+        self._window = window
+
+        self.output.set_parameters(
+            channels=self.input.channels,
+            frequency=self.input.frequency,
+            meta=self.input.meta)
+
+        self.output.set_epoched(
+            epoching_frequency=self.input.epoching_frequency)
+
+        self._buffered_windows = {}
+
+        Node.log_instance(self, {'window': self._window})
+
+    def update(self):
+        for epoch in self.input:
+            nb_rows = len(epoch)
+            if nb_rows not in self._buffered_windows:
+                print('rcalculed')
+                if self._window == 'blackman':
+                    self._buffered_windows[nb_rows] = signal.blackman(nb_rows)
+                elif self._window == 'hanning':
+                    self._buffered_windows[nb_rows] = signal.hanning(nb_rows)
+                elif self._window == 'hamming':
+                    self._buffered_windows[nb_rows] = signal.hamming(nb_rows)
+                elif self._window == 'triang':
+                    self._buffered_windows[nb_rows] = signal.triang(nb_rows)
+            self.output.set_from_df((epoch.transpose() * self._buffered_windows[nb_rows]).transpose())

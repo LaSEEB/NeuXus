@@ -2,12 +2,10 @@ import sys
 
 sys.path.append('..')
 
-from modules.nodes import (filter, io, select, epoching, epoch_function)
+from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate)
 
-lsl_reception = io.LslReceive('type', 'EEG')  # or (port0, 'type', 'signal')
-channel_selector = select.ChannelSelector(lsl_reception.output, 'index', [1, 2, 3, 4])
-epoch = epoching.TimeBasedEpoching(channel_selector.output, 1, 0.25)
-stat = epoch_function.UnivariateStat(epoch.output, 'iqr', q1=0, q2=1)
-stat2 = epoch_function.UnivariateStat(epoch.output, 'range')
-lsl_send = io.LslSend(stat.output, 'stat')
-lsl_send2 = io.LslSend(stat2.output, 'stat2')
+lsl_reception = generate.Generator('simulation', 4, 250)  # or (port0, 'type', 'signal')
+filter_ = filter.ButterFilter(lsl_reception.output, 8, 12)
+tbe = epoching.TimeBasedEpoching(filter_.output, 1, 1)
+win = epoch_function.Windowing(tbe.output, 'blackman')
+channel_selector = io.LslSend(win.output, 'my_test', type='EEG')
