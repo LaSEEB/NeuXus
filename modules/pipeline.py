@@ -27,7 +27,7 @@ def run():
     # run the pipeline
     try:
         while True:
-            logging.debug('New iteration')
+            # logging.debug('New iteration')
             # print('CPU ', py.cpu_percent(interval=.0001), '%')
             # print('RAM ', int(100 * py.memory_percent()) / 100, '%')
             '''
