@@ -8,7 +8,7 @@ Launch with python test_RDA_1.py
 
 # Helper function for receiving whole message
 def RecvData(socket, requestedSize):
-    returnStream = ''
+    returnStream = b''
     while len(returnStream) < requestedSize:
         databytes = socket.recv(requestedSize - len(returnStream))
         if databytes == '':
@@ -24,8 +24,8 @@ def SplitString(raw):
     stringlist = []
     s = ""
     for i in range(len(raw)):
-        if raw[i] != '\x00':
-            s = s + raw[i]
+        if raw[i] != b'\x00':
+            s += f'{raw[i]}'
         else:
             stringlist.append(s)
             s = ""
@@ -59,10 +59,13 @@ def GetData(rawdata, channelCount):
 
     # Extract eeg data as array of floats
     data = []
-    for i in range(points * channelCount):
-        index = 12 + 4 * i
-        value = unpack('<f', rawdata[index:index + 4])
-        data.append(value[0])
+    for point in range(points):
+        row = []
+        for j in range(channelCount):
+            index = 12 + 4 * point * j
+            value = unpack('<f', rawdata[index:index + 4])
+            row.append(value[0])
+        data.append(row)
     return (block, points, markerCount, data)
 
 
@@ -99,6 +102,8 @@ if __name__ == '__main__':
 
         # Get data part of message, which is of variable size
         rawdata = RecvData(my_socket, msgsize - 24)
+        print('type ', msgtype)
+        print('size ', msgsize)
 
         # Perform action dependend on the message type
         if msgtype == 1:
@@ -118,15 +123,12 @@ if __name__ == '__main__':
         elif msgtype == 4:
             # Data message, extract data and markers
             (block, points, markerCount, data) = GetData(rawdata, channelCount)
+            print('point', data)
 
             # Check for overflow
             if lastBlock != -1 and block > lastBlock + 1:
                 print("*** Overflow with " + str(block - lastBlock) + " datablocks ***")
             lastBlock = block
-            print('block', block)
-            print('points', points)
-            print('data:', data)
-            print('markerCount', markerCount)
 
         elif msgtype == 3:
             # Stop message, terminate program
