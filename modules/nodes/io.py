@@ -5,7 +5,7 @@ from struct import unpack
 from socket import (AF_INET, SOCK_STREAM, socket)
 import logging
 import uuid
-from time import time
+from time import (time, sleep)
 from pylsl import (StreamInfo, StreamOutlet,
                    StreamInlet, resolve_byprop, pylsl)
 
@@ -276,6 +276,7 @@ class RdaReceive(Node):
             meta='')
         self.persistent = b''
         self._last_block = -1
+        self._time = None
 
     def connect(self):
         pass
@@ -285,6 +286,7 @@ class RdaReceive(Node):
         raw = self.persistent + raw
         flag = True
         data_to_send = []
+        timestamps = []
         while flag:
             if len(raw) >= 24:
                 info = raw[:24]
@@ -299,12 +301,14 @@ class RdaReceive(Node):
                             print("*** Overflow with " + str(block - self._last_block) + " datablocks ***")
                         self._last_block = block
                         data_to_send += data
-					
-                    self.persistent = raw
+                        if not self._time:
+                            self._time = time() - points / self._frequency
+                        timestamps += [self._time + i / self._frequency for i in range(points)]
                 else:
                     self.persistent = raw
                     flag = False
             else:
                 self.persistent = raw
                 flag = False
-        print(len(data_to_send))
+        print(timestamps)
+        sleep(0.08)
