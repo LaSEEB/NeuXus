@@ -216,15 +216,17 @@ class RdaReceive(Node):
         # Extract eeg data as array of floats
         data = []
         for point in range(points):
+            row = []
             for chan in range(self._channel_count):
                 index = 12 + 4 * point * chan
                 value = unpack('<f', rawdata[index:index + 4])
-                data.append(value[0])
+                row.append(value[0])
+            data.append(row)
         return (block, points, markerCount, data)
 
     def __init__(self, rdaport=51244, min_chunk_size=32, timeout=10.0):
         Node.__init__(self, None)
-        self._buf_size_max = 2**13
+        self._buf_size_max = 2**14
         self._min_chunk_size = min_chunk_size
 
         # Create a tcpip socket
@@ -263,10 +265,15 @@ class RdaReceive(Node):
                 self._frequency = 1000000 / samplingInterval
                 self._channels = channelNames
                 self._channel_count = channelCount
+                not_initialized = False
             else:
                 print('get msgtype', msgtype)
 
         Node.log_instance(self, {'channels': self._channels, 'sampling frequency': self._frequency})
+        self.output.set_parameters(
+            channels=self._channels,
+            frequency=self._frequency,
+            meta='')
         self.persistent = b''
         self._last_block = -1
 
@@ -275,23 +282,29 @@ class RdaReceive(Node):
 
     def update(self):
         raw = self._my_socket.recv(self._buf_size_max)
-        print('len de raw ', len(raw))
         raw = self.persistent + raw
         flag = True
         data_to_send = []
         while flag:
-            info = raw[:24]
-            (id1, id2, id3, id4, msgsize, msgtype) = unpack('<llllLL', info)
-            print(msgtype)
-            if len(raw) - 24 >= msgsize:
-                rawdata = raw[24:24 + msgsize]
-                raw = raw[24 + msgsize:]
-                if msgtype == 4:
-                    (block, points, markerCount, data) = self._get_data(rawdata, self._channel_count)
-                    if self._last_block != -1 and block > self._last_block + 1:
-                        print("*** Overflow with " + str(block - self._last_block) + " datablocks ***")
-                    self._last_block = block
-                    data_to_send.append(data)
+            if len(raw) >= 24:
+                info = raw[:24]
+                (id1, id2, id3, id4, msgsize, msgtype) = unpack('<llllLL', info)
+                if len(raw) >= msgsize:
+                    rawdata = raw[24:msgsize]
+                    raw = raw[msgsize:]
+                    if msgtype == 4:
+                        (block, points, markerCount, data) = self._get_data(rawdata)
+                        print('points ', points)
+                        if self._last_block != -1 and block > self._last_block + 1:
+                            print("*** Overflow with " + str(block - self._last_block) + " datablocks ***")
+                        self._last_block = block
+                        data_to_send += data
+					
+                    self.persistent = raw
+                else:
+                    self.persistent = raw
+                    flag = False
             else:
                 self.persistent = raw
                 flag = False
+        print(len(data_to_send))
