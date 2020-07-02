@@ -1,6 +1,8 @@
 import sys
 
 import numpy as np
+from struct import unpack
+from socket import (AF_INET, SOCK_STREAM, socket)
 import logging
 import uuid
 from time import time
@@ -152,3 +154,144 @@ class LslReceive(Node):
                     self.output.set(values, stamps)
         else:
             return
+
+
+class RdaReceive(Node):
+    """Receive from a LSL stream.
+    Attributes:
+        output_: provides DataFrame and meta
+    Args:
+        sync (string, None): The method used to synchronize timestamps. Use ``local`` if you receive the stream from another application on the same computer. Use ``network`` if you receive from another computer.
+        max_samples (int): The maximum number of samples to return per call.
+    """
+
+    def _receive_data(self, requestedSize):
+        # Helper function for receiving whole message
+        returnStream = b''
+        while len(returnStream) < requestedSize:
+            databytes = self._my_socket.recv(requestedSize - len(returnStream))
+            if databytes == '':
+                print("connection broken")
+            returnStream += databytes
+
+        return returnStream
+
+    def _split_string(self, raw):
+        # Helper function for splitting a raw array of
+        # zero terminated strings (C) into an array of python strings
+        stringlist = []
+        s = ""
+        for i in range(len(raw)):
+            if raw[i] != '\x00':
+                s += f'{raw[i]}'
+            else:
+                stringlist.append(s)
+                s = ""
+
+        return stringlist
+
+    def _get_properties(self, rawdata):
+        # Helper function for extracting eeg properties from a raw data array
+        # read from tcpip socket
+
+        # Extract numerical data
+        (channelCount, samplingInterval) = unpack('<Ld', rawdata[:12])
+
+        # Extract resolutions
+        resolutions = []
+        for c in range(channelCount):
+            index = 12 + c * 8
+            restuple = unpack('<d', rawdata[index:index + 8])
+            resolutions.append(restuple[0])
+
+        # Extract channel names
+        channelNames = self._split_string(rawdata[12 + 8 * channelCount:])
+
+        return (channelCount, samplingInterval, resolutions, channelNames)
+
+    def _get_data(self, rawdata):
+        # Extract numerical data
+        (block, points, markerCount) = unpack('<LLL', rawdata[:12])
+
+        # Extract eeg data as array of floats
+        data = []
+        for point in range(points):
+            for chan in range(self._channel_count):
+                index = 12 + 4 * point * chan
+                value = unpack('<f', rawdata[index:index + 4])
+                data.append(value[0])
+        return (block, points, markerCount, data)
+
+    def __init__(self, rdaport=51244, min_chunk_size=32, timeout=10.0):
+        Node.__init__(self, None)
+        self._buf_size_max = 2**13
+        self._min_chunk_size = min_chunk_size
+
+        # Create a tcpip socket
+        self._my_socket = socket(AF_INET, SOCK_STREAM)
+        # RECView: 51254, Recorder: 51244, use 51234 to connect with 16Bit Port
+        self._my_socket.connect(("localhost", rdaport))
+        not_initialized = True
+        while not_initialized:
+
+            # Get message header as raw array of chars
+            rawhdr = self._receive_data(24)
+
+            # Split array into usefull information id1 to id4 are constants
+            (id1, id2, id3, id4, msgsize, msgtype) = unpack('<llllLL', rawhdr)
+            print('First message')
+            print('msgsize ', msgsize)
+            print('msgtype ', msgtype)
+
+            # Get data part of message, which is of variable size
+            rawdata = self._receive_data(msgsize - 24)
+
+            # Perform action dependend on the message type
+            if msgtype == 1:
+                # Start message, extract eeg properties and display them
+                (channelCount, samplingInterval, resolutions,
+                 channelNames) = self._get_properties(rawdata)
+                # reset block counter
+                self.lastBlock = -1
+
+                print("Start")
+                print("Number of channels: " + str(channelCount))
+                print("Sampling interval: " + str(samplingInterval))
+                print("Sampling rate: " + str(1000000 / samplingInterval))
+                print("Resolutions: " + str(resolutions))
+                print("Channel Names: " + str(channelNames))
+                self._frequency = 1000000 / samplingInterval
+                self._channels = channelNames
+                self._channel_count = channelCount
+            else:
+                print('get msgtype', msgtype)
+
+        Node.log_instance(self, {'channels': self._channels, 'sampling frequency': self._frequency})
+        self.persistent = b''
+        self._last_block = -1
+
+    def connect(self):
+        pass
+
+    def update(self):
+        raw = self._my_socket.recv(self._buf_size_max)
+        print('len de raw ', len(raw))
+        raw = self.persistent + raw
+        flag = True
+        data_to_send = []
+        while flag:
+            info = raw[:24]
+            (id1, id2, id3, id4, msgsize, msgtype) = unpack('<llllLL', info)
+            print(msgtype)
+            if len(raw) - 24 >= msgsize:
+                rawdata = raw[24:24 + msgsize]
+                raw = raw[24 + msgsize:]
+                if msgtype == 4:
+                    (block, points, markerCount, data) = self._get_data(rawdata, self._channel_count)
+                    if self._last_block != -1 and block > self._last_block + 1:
+                        print("*** Overflow with " + str(block - self._last_block) + " datablocks ***")
+                    self._last_block = block
+                    data_to_send.append(data)
+            else:
+                self.persistent = raw
+                flag = False
