@@ -224,15 +224,26 @@ class RdaReceive(Node):
             data.append(row)
         return (block, points, markerCount, data)
 
-    def __init__(self, rdaport=51244, min_chunk_size=32, timeout=10.0):
+    def __init__(self, rdaport=51254, min_chunk_size=32, offset=.0, timeout=10.0):
         Node.__init__(self, None)
         self._buf_size_max = 2**14
         self._min_chunk_size = min_chunk_size
+        self._offset = offset
 
         # Create a tcpip socket
         self._my_socket = socket(AF_INET, SOCK_STREAM)
         # RECView: 51254, Recorder: 51244, use 51234 to connect with 16Bit Port
-        self._my_socket.connect(("localhost", rdaport))
+        i = time()
+        flag = True
+        while flag:
+            try:
+                self._my_socket.connect(("localhost", rdaport))
+            except ConnectionRefusedError:
+                if time() - i > timeout:
+                    print('No RDA stream found')
+                    raise Exception
+            else:
+                flag = False
         not_initialized = True
         while not_initialized:
 
@@ -263,6 +274,8 @@ class RdaReceive(Node):
                 print("Resolutions: " + str(resolutions))
                 print("Channel Names: " + str(channelNames))
                 self._frequency = 1000000 / samplingInterval
+                if not channelNames:
+                    channelNames = [f'Ch{i}' for i in range(1, channelCount + 1)]
                 self._channels = channelNames
                 self._channel_count = channelCount
                 not_initialized = False
@@ -282,7 +295,7 @@ class RdaReceive(Node):
         pass
 
     def update(self):
-        raw = self._my_socket.recv(self._buf_size_max)
+        raw = self._my_socket.recv(self._buf_size_max*8)
         raw = self.persistent + raw
         flag = True
         data_to_send = []
@@ -296,19 +309,20 @@ class RdaReceive(Node):
                     raw = raw[msgsize:]
                     if msgtype == 4:
                         (block, points, markerCount, data) = self._get_data(rawdata)
-                        print('points ', points)
                         if self._last_block != -1 and block > self._last_block + 1:
-                            print("*** Overflow with " + str(block - self._last_block) + " datablocks ***")
+                            print("*** 'Get late, reset clock' Overflow with " + str(block - self._last_block) + " datablocks ***")
+                            self._time = None
                         self._last_block = block
                         data_to_send += data
                         if not self._time:
                             self._time = time() - points / self._frequency
-                        timestamps += [self._time + i / self._frequency for i in range(points)]
+                        timestamps += [self._time - self._offset + i / self._frequency for i in range(points)]
+                        self._time = timestamps[-1] + self._offset + 1 / self._frequency
                 else:
                     self.persistent = raw
                     flag = False
             else:
                 self.persistent = raw
                 flag = False
-        print(timestamps)
-        sleep(0.08)
+        if len(timestamps) > 0:
+                self.output.set(data_to_send, timestamps, self._channels)
