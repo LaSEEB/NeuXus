@@ -159,15 +159,21 @@ class LslReceive(Node):
 
 
 class RdaReceive(Node):
-    """Receive from a LSL stream.
+    """Receive from a RDA stream.
     Attributes:
-        output_: provides DataFrame and meta
+        output(Port): output port
     Args:
-        sync (string, None): The method used to synchronize timestamps. Use ``local`` if you receive the stream from another application on the same computer. Use ``network`` if you receive from another computer.
-        max_samples (int): The maximum number of samples to return per call.
+        rdaport(int): rdaport to connect with, default is 51254
+        offset(float): offset (in second) to apply to incoming data timestamps
+        host(str): RDA host
+        timeout(float): timeout for getting RDA stream
+
+    Example:
+        RdaReceive()
+        RdaReceive(rdaport=52136, offset=.125)
     """
 
-    def __init__(self, rdaport=51254, offset=.0, timeout=10.0, host="localhost"):
+    def __init__(self, rdaport=51254, offset=.0, host="localhost", timeout=10.0):
         Node.__init__(self, None)
         self._buf_size_max = 2**15
         self._rdaport = rdaport

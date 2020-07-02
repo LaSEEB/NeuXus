@@ -1,6 +1,8 @@
 import sys
 import os
 
+import pandas as pd
+
 sys.path.append('../..')
 
 from modules.node import Node
@@ -24,13 +26,11 @@ class ToCsv(Node):
         self._sep = sep
         self._decimal = decimal
         self._first_iter = True
+        chan = self.input.channels
+        pd.DataFrame([] * len(chan), [], chan).to_csv(self._file, mode='w', sep=self._sep, decimal=self._decimal)
 
         Node.log_instance(self, {'file': self._file})
 
     def update(self):
         for chunk in self.input:
-            if self._first_iter:
-                chunk.to_csv(self._file, mode='w', sep=self._sep, decimal=self._decimal)
-                self._first_iter = False
-            else:
-                chunk.to_csv(self._file, mode='a+', header=False, sep=self._sep, decimal=self._decimal)
+            chunk.to_csv(self._file, mode='a+', header=False, sep=self._sep, decimal=self._decimal)
