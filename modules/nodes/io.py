@@ -39,7 +39,8 @@ class LslSend(Node):
         self.uuid = uuid_
         self.connect()
 
-        Node.log_instance(self, {'name': self._name, 'frequency': self._frequency, 'channels': self.input.channels})
+        Node.log_instance(self, {
+                          'name': self._name, 'frequency': self._frequency, 'channels': self.input.channels})
 
     def connect(self):
         '''Create an outlet for streaming data'''
@@ -95,7 +96,8 @@ class LslReceive(Node):
 
         self.connect()
 
-        Node.log_instance(self, {'channels': self.channels, 'sampling frequency': self._frequency})
+        Node.log_instance(
+            self, {'channels': self.channels, 'sampling frequency': self._frequency})
 
     def connect(self):
         if not self.inlet:
@@ -125,7 +127,7 @@ class LslReceive(Node):
                     channels.append(channel_name)
                     channel = channel.next_sibling()
             if not channels:
-                channels = [f'{i + 1}' for i in range(info.channel_count())]
+                channels = [f'Ch{i + 1}' for i in range(info.channel_count())]
             self.channels = channels
             self._frequency = info.nominal_srate()
 
@@ -165,20 +167,125 @@ class RdaReceive(Node):
         max_samples (int): The maximum number of samples to return per call.
     """
 
+    def __init__(self, rdaport=51254, offset=.0, timeout=10.0, host="localhost"):
+        Node.__init__(self, None)
+        self._buf_size_max = 2**15
+        self._rdaport = rdaport
+        self._offset = offset
+        self._timeout = timeout
+        self._host = host
+
+        self._connect()
+
+        Node.log_instance(
+            self, {'channels': self._channels, 'sampling frequency': self._frequency})
+        self.output.set_parameters(
+            channels=self._channels,
+            frequency=self._frequency,
+            meta='')
+        self._persistent = b''
+        self._last_block = -1
+        self._time = None
+
+    def _connect(self):
+        # Create a tcpip socket
+        self._my_socket = socket(AF_INET, SOCK_STREAM)
+        # RECView: 51254, Recorder: 51244, use 51234 to connect with 16Bit Port
+        starttime = time()
+        flag = True
+        while flag:  # wait for the socket connection
+            try:
+                self._my_socket.connect((self._host, self._rdaport))
+            except ConnectionRefusedError:
+                if time() - starttime > self._timeout:
+                    print('No RDA stream found')
+                    raise Exception
+            else:
+                flag = False
+
+        while True:  # wait for the starting message
+            # Get message header as raw array of chars
+            rawhdr = self._receive_data(24)
+
+            # Split array into usefull information id1 to id4 are constants
+            (id1, id2, id3, id4, msgsize, msgtype) = unpack('<llllLL', rawhdr)
+
+            # Get data part of message, which is of variable size
+            rawdata = self._receive_data(msgsize - 24)
+
+            if msgtype == 1:
+                # Start message, extract eeg properties
+                (channel_count, sampling_interval, resolutions,
+                 channel_names) = self._get_properties(rawdata)
+                self._frequency = 1000000 / sampling_interval
+                if not channel_names:
+                    channel_names = [f'Ch{i}' for i in range(1, channel_count + 1)]
+                self._channels = channel_names
+                return
+            if time() - starttime > self._timeout:
+                print('Timeout')
+                raise Exception
+
+    def update(self):
+        # receive all data from socket
+        raw = self._my_socket.recv(self._buf_size_max)
+        # concatenate with last value in persitence
+        raw = self._persistent + raw
+        # initialize loop
+        data_to_send = []
+        timestamps = []
+        flag = True
+        while flag:
+            if len(raw) >= 24:
+                # get info from 24 fisrt bytes
+                info = raw[:24]
+                (id1, id2, id3, id4, msgsize, msgtype) = unpack('<llllLL', info)
+                if len(raw) >= msgsize:  # test if we already get the full message in buffer
+                    # get data of current message
+                    rawdata = raw[24:msgsize]
+                    # store the rest in raw
+                    raw = raw[msgsize:]
+                    if msgtype == 4:  # if the message contains data do:
+                        (block, points, data) = self._extract_data(rawdata)
+                        # test overflow of block (ie if we do not receive a block)
+                        if self._last_block != -1 and block > self._last_block + 1:
+                            logging.warn(
+                                "Overflow when getting data from RDA, clock is reset ")
+                            self._time = None
+                        # update last_block
+                        self._last_block = block
+                        # concatenate data
+                        data_to_send += data
+                        if not self._time:  # set the local clock
+                            self._time = time() - points / self._frequency
+                        timestamps += [self._time - self._offset + i / self._frequency for i in range(points)]
+                        # self._time points to the timestamp of first row from next block
+                        self._time = timestamps[-1] + self._offset + 1 / self._frequency
+                else:
+                    # add to persitence and stop iterations
+                    self._persistent = raw
+                    flag = False
+            else:
+                # add to persitence and stop iterations
+                self._persistent = raw
+                flag = False
+        if len(timestamps) > 0:
+            # send data in output
+            self.output.set(data_to_send, timestamps, self._channels)
+
     def _receive_data(self, requestedSize):
-        # Helper function for receiving whole message
+        """Helper function for receiving a whole message"""
         returnStream = b''
         while len(returnStream) < requestedSize:
             databytes = self._my_socket.recv(requestedSize - len(returnStream))
             if databytes == '':
                 print("connection broken")
             returnStream += databytes
-
         return returnStream
 
     def _split_string(self, raw):
-        # Helper function for splitting a raw array of
-        # zero terminated strings (C) into an array of python strings
+        """Helper function for splitting a raw array of
+        zero terminated strings (C) into an array of python strings"""
         stringlist = []
         s = ""
         for i in range(len(raw)):
@@ -187,12 +294,11 @@ class RdaReceive(Node):
             else:
                 stringlist.append(s)
                 s = ""
-
         return stringlist
 
     def _get_properties(self, rawdata):
-        # Helper function for extracting eeg properties from a raw data array
-        # read from tcpip socket
+        """Function for extracting eeg properties from a raw data array
+        read from tcpip socket"""
 
         # Extract numerical data
         (channelCount, samplingInterval) = unpack('<Ld', rawdata[:12])
@@ -209,120 +315,18 @@ class RdaReceive(Node):
 
         return (channelCount, samplingInterval, resolutions, channelNames)
 
-    def _get_data(self, rawdata):
+    def _extract_data(self, rawdata):
+        """function for extracting data from message body"""
         # Extract numerical data
-        (block, points, markerCount) = unpack('<LLL', rawdata[:12])
+        (block, points, _) = unpack('<LLL', rawdata[:12])
 
         # Extract eeg data as array of floats
         data = []
         for point in range(points):
             row = []
-            for chan in range(self._channel_count):
+            for chan, _ in enumerate(self._channels):
                 index = 12 + 4 * point * chan
                 value = unpack('<f', rawdata[index:index + 4])
                 row.append(value[0])
             data.append(row)
-        return (block, points, markerCount, data)
-
-    def __init__(self, rdaport=51254, min_chunk_size=32, offset=.0, timeout=10.0):
-        Node.__init__(self, None)
-        self._buf_size_max = 2**14
-        self._min_chunk_size = min_chunk_size
-        self._offset = offset
-
-        # Create a tcpip socket
-        self._my_socket = socket(AF_INET, SOCK_STREAM)
-        # RECView: 51254, Recorder: 51244, use 51234 to connect with 16Bit Port
-        i = time()
-        flag = True
-        while flag:
-            try:
-                self._my_socket.connect(("localhost", rdaport))
-            except ConnectionRefusedError:
-                if time() - i > timeout:
-                    print('No RDA stream found')
-                    raise Exception
-            else:
-                flag = False
-        not_initialized = True
-        while not_initialized:
-
-            # Get message header as raw array of chars
-            rawhdr = self._receive_data(24)
-
-            # Split array into usefull information id1 to id4 are constants
-            (id1, id2, id3, id4, msgsize, msgtype) = unpack('<llllLL', rawhdr)
-            print('First message')
-            print('msgsize ', msgsize)
-            print('msgtype ', msgtype)
-
-            # Get data part of message, which is of variable size
-            rawdata = self._receive_data(msgsize - 24)
-
-            # Perform action dependend on the message type
-            if msgtype == 1:
-                # Start message, extract eeg properties and display them
-                (channelCount, samplingInterval, resolutions,
-                 channelNames) = self._get_properties(rawdata)
-                # reset block counter
-                self.lastBlock = -1
-
-                print("Start")
-                print("Number of channels: " + str(channelCount))
-                print("Sampling interval: " + str(samplingInterval))
-                print("Sampling rate: " + str(1000000 / samplingInterval))
-                print("Resolutions: " + str(resolutions))
-                print("Channel Names: " + str(channelNames))
-                self._frequency = 1000000 / samplingInterval
-                if not channelNames:
-                    channelNames = [f'Ch{i}' for i in range(1, channelCount + 1)]
-                self._channels = channelNames
-                self._channel_count = channelCount
-                not_initialized = False
-            else:
-                print('get msgtype', msgtype)
-
-        Node.log_instance(self, {'channels': self._channels, 'sampling frequency': self._frequency})
-        self.output.set_parameters(
-            channels=self._channels,
-            frequency=self._frequency,
-            meta='')
-        self.persistent = b''
-        self._last_block = -1
-        self._time = None
-
-    def connect(self):
-        pass
-
-    def update(self):
-        raw = self._my_socket.recv(self._buf_size_max*8)
-        raw = self.persistent + raw
-        flag = True
-        data_to_send = []
-        timestamps = []
-        while flag:
-            if len(raw) >= 24:
-                info = raw[:24]
-                (id1, id2, id3, id4, msgsize, msgtype) = unpack('<llllLL', info)
-                if len(raw) >= msgsize:
-                    rawdata = raw[24:msgsize]
-                    raw = raw[msgsize:]
-                    if msgtype == 4:
-                        (block, points, markerCount, data) = self._get_data(rawdata)
-                        if self._last_block != -1 and block > self._last_block + 1:
-                            print("*** 'Get late, reset clock' Overflow with " + str(block - self._last_block) + " datablocks ***")
-                            self._time = None
-                        self._last_block = block
-                        data_to_send += data
-                        if not self._time:
-                            self._time = time() - points / self._frequency
-                        timestamps += [self._time - self._offset + i / self._frequency for i in range(points)]
-                        self._time = timestamps[-1] + self._offset + 1 / self._frequency
-                else:
-                    self.persistent = raw
-                    flag = False
-            else:
-                self.persistent = raw
-                flag = False
-        if len(timestamps) > 0:
-                self.output.set(data_to_send, timestamps, self._channels)
+        return (block, points, data)
