@@ -331,7 +331,7 @@ class RdaReceive(Node):
         for point in range(points):
             row = []
             for chan in range(len(self._channels)):
-                index = 12 + len(self._channels) * point + 4 * chan
+                index = 12 + len(self._channels) * chan + 4 * point
                 value = unpack('<f', rawdata[index:index + 4])
                 row.append(value[0])
             data.append(row)
