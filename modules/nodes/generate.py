@@ -32,7 +32,7 @@ class Generator(Node):
         self._generator = generator
         self._sampling_frequency = sampling_frequency
         self._min_chunk_size = int(min_chunk_size)
-        self._channels = [f'C{i}' for i in range(1, int(nb_channels) + 1)]
+        self._channels = [f'Ch{i}' for i in range(1, int(nb_channels) + 1)]
         self._min_period = self._min_chunk_size / self._sampling_frequency
 
         self.output.set_parameters(
