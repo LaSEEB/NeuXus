@@ -3,7 +3,7 @@ import sys
 sys.path.append('..')
 import numpy as np
 
-from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate, feature, function, classify)
+from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate, feature, function, classify, display)
 
 lsl_reception = generate.Generator('simulation', 16, 500)
 
@@ -18,3 +18,4 @@ average_epoch = epoch_function.Average(square_epoch.output)
 log_epoch = function.ApplyFunction(average_epoch.output, lambda x: np.log1p(np.log1p(x)))
 features = feature.FeatureAggregator(log_epoch.output)
 class_ = classify.Classify(features.output, '../examples/myfile_lda_model.sav')
+disp1 = display.Plot(class_.output)

@@ -21,7 +21,7 @@ class Classify(Node):
         self._loaded_model = joblib.load(model_file)
 
         self.output.set_parameters(
-            channels=self.input.channels,
+            channels=['class'],
             frequency=self.input.frequency,
             meta=self.input.meta)
 
@@ -31,7 +31,7 @@ class Classify(Node):
 
     def update(self):
         for vector in self.input:
-            print(self._loaded_model.predict(vector.values.tolist()))
+            self.output.set(self._loaded_model.predict(vector.values.tolist()), columns=['class'], timestamps=vector.index)
 
 
 """class Train(Node):
