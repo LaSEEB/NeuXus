@@ -58,3 +58,12 @@ class Node(KeepRefsFromParent, ABC):
     def update(self):
         for chunk_or_epoch in self.input:
             pass
+
+    def terminate(self):
+        pass
+
+    def set_queue(self, q):
+        self._q = q
+
+    def second_init(self):
+        pass

@@ -43,7 +43,5 @@ if __name__ == '__main__':
         logging.basicConfig(
             format='[%(levelname)s] %(message)s',
             level=numeric_level)
-    # initialize the nodes
-    exec(open(args.pipeline).read())
     # run the pipeline
-    run()
+    run(args.pipeline)
