@@ -1,8 +1,10 @@
 import sys
+import os
 
 import pandas as pd
 import logging
 import yaml
+from xml.dom import minidom
 
 sys.path.append('../..')
 
@@ -48,21 +50,32 @@ class ChannelSelector(Node):
 
 class SpatialFilter(Node):
     """Maps M inputs to N outputs by multiplying the each input vector with a matrix
-    usually used after a ChannelSelector
     Attributes:
      - output (port): output GroupOfPorts
     Args:
-     - input (port): input port
-     - matrix (dict or str): dictionnary with new channel name as keys and list of coefficients as values,
-       list must be of the same length as input.channels or path to the matrix yaml file
+     - input_port (port): input port
+     - matrix (dict or str): path to the matrix yaml/xml/cfg file OR dictionnary with new channel
+       name as keys and list of coefficients as values, list must be of the same length as input.channels
 
     example:
-      - SpatialFilter(input_port, '../example/my_matrix')
+      - SpatialFilter(input_port, '../example/my_matrix.yaml')
         where my_matrix is the following yaml file:
+
         --- # Matrix of coefficient for SpatialFilter
         OC1: [1, 1, 0, 4e-9]
         OC2: [4, 2, 4, -2]
         ...
+
+      - SpatialFilter(input_port, '../example/my_matrix.cfg')
+        where my_matrix is the following cfg file:
+            <SettingValue>7.352412e-002 2.354113e-001 -1.212912e-001 -3.687871e-002 2.785947e-002 9.112804e-003
+            2.665961e-001 1.635848e-001 -1.540287e-002 -1.944730e-002 -7.130017e-002 -6.074913e-001</SettingValue>
+            <SettingValue>2</SettingValue>
+            <SettingValue>6</SettingValue>
+        (first setting values are coefficients
+         second one is the number of output channels
+         last one is the number of input channels)
+
       - SpatialFilter(input_port, matrix)
         where matrix = {
             'OC2': [4, 0, -1e-2, 0],
@@ -75,12 +88,21 @@ class SpatialFilter(Node):
         Node.__init__(self, input_port)
 
         if isinstance(matrix, str):
-            logging.debug(f'Got matrix from file {matrix}')
-            with open(matrix, 'r') as file:
-                matrix = yaml.load(file, Loader=yaml.FullLoader)
-            logging.debug(f'{matrix}')
+            filename, file_extension = os.path.splitext(matrix)
+            if file_extension == '.yaml':
+                logging.debug(f'Got matrix from file {matrix}')
+                with open(matrix, 'r') as file:
+                    matrix = yaml.load(file, Loader=yaml.FullLoader)
+                logging.debug(f'{matrix}')
+            elif file_extension in ['.xml', '.cfg']:
+                file = minidom.parse(matrix)
+                coefs = file.getElementsByTagName('SettingValue')[0].firstChild.data
+                coefs = [float(coef) for coef in coefs.split()]
+                output_ch_nb = int(file.getElementsByTagName('SettingValue')[1].firstChild.data)
+                input_ch_nb = int(file.getElementsByTagName('SettingValue')[2].firstChild.data)
+                assert len(coefs) == input_ch_nb * output_ch_nb
+                matrix = {f'Ch{i + 1}': [coefs[i * input_ch_nb + j] for j in range(input_ch_nb)] for i in range(output_ch_nb)}
 
-        # protected
         self._matrix = matrix
         self._channels = [*self._matrix.keys()]
 
