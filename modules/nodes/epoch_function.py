@@ -9,39 +9,6 @@ sys.path.append('../..')
 from modules.node import Node
 
 
-class Average(Node):
-    """DEPRECIATED
-    Attributes:
-        input_: get DataFrame and meta from input_ port
-        output_: output GroupOfPorts
-    Args:
-        duration: duration of epochs
-    """
-
-    def __init__(self, input_port):
-        Node.__init__(self, input_port)
-
-        assert self.input.is_epoched
-
-        self.output.set_parameters(
-            channels=self.input.channels,
-            sampling_frequency=self.input.epoching_frequency,
-            meta=self.input.meta)
-
-        self.output.set_non_epoched()
-
-        self.value = np.array([0] * len(self.input.channels))
-
-        Node.log_instance(self, {'output frequency': self.input.epoching_frequency})
-
-    def update(self):
-        for epoch in self.input:
-            mean = epoch.mean()
-            self.output.set_from_df(pd.DataFrame(
-                mean, columns=[epoch.index[-1]]).transpose())
-            self.value = np.array(mean.values)
-
-
 class UnivariateStat(Node):
     """Mean, Variance, Median, etc. on the incoming epoched Signal
     perform calculation on each coming epoch and save last value in value
