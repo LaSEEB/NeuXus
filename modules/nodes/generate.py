@@ -36,8 +36,9 @@ class Generator(Node):
         self._min_period = self._min_chunk_size / self._sampling_frequency
 
         self.output.set_parameters(
+            data_type='signal',
             channels=self._channels,
-            frequency=self._sampling_frequency,
+            sampling_frequency=self._sampling_frequency,
             meta='')
 
         Node.log_instance(self, {

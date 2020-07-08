@@ -37,8 +37,9 @@ class ChannelSelector(Node):
             self._channels = selected
 
         self.output.set_parameters(
+            data_type=self.input.data_type,
             channels=self._channels,
-            frequency=self.input.frequency,
+            sampling_frequency=self.input.sampling_frequency,
             meta=self.input.meta)
 
         Node.log_instance(self, {'selected channels': self._channels})
@@ -115,8 +116,9 @@ class SpatialFilter(Node):
             str_matrix += f'\n      {chan}: {self._matrix[chan]}'
 
         self.output.set_parameters(
+            data_type=self.input.data_type,
             channels=self._channels,
-            frequency=self.input.frequency,
+            sampling_frequency=self.input.sampling_frequency,
             meta=self.input.meta)
 
         Node.log_instance(self, {'matrix': str_matrix})
@@ -165,8 +167,9 @@ class ReferenceChannel(Node):
         self._channels.remove(self._ref)
 
         self.output.set_parameters(
+            data_type=self.input.data_type,
             channels=self._channels,
-            frequency=self.input.frequency,
+            sampling_frequency=self.input.sampling_frequency,
             meta=self.input.meta)
 
         Node.log_instance(self, {'reference': self._ref})
@@ -195,8 +198,9 @@ class CommonAverageReference(Node):
         Node.__init__(self, input_port)
 
         self.output.set_parameters(
+            data_type=self.input.data_type,
             channels=self.input.channels,
-            frequency=self.input.frequency,
+            sampling_frequency=self.input.sampling_frequency,
             meta=self.input.meta)
 
         Node.log_instance(self, {})

@@ -11,7 +11,7 @@ from pynput import keyboard
 
 sys.path.append('..')
 
-from modules.chunks import IterChunks
+from modules.chunks import Port
 from modules.node import Node
 
 
@@ -43,8 +43,8 @@ def run(pipeline):
 
     exec(open(pipeline).read())
 
-    ports = IterChunks.get_instances()
-    logging.debug(f'Name  freq  epoch epochfreq channels')
+    ports = Port.get_instances()
+    logging.debug(f'Name  freq  data_type epochfreq channels')
     for port in ports:
         port.log_parameters()
 
@@ -63,7 +63,7 @@ def run(pipeline):
             print(p1.memory_percent())'''
         calc_starttime = time()
 
-        for port in IterChunks.get_instances():
+        for port in Port.get_instances():
             port.clear()
         for nods in Node.get_instances():
             nods.update()

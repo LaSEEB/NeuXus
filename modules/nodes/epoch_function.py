@@ -10,7 +10,7 @@ from modules.node import Node
 
 
 class Average(Node):
-    """TO DO
+    """DEPRECIATED
     Attributes:
         input_: get DataFrame and meta from input_ port
         output_: output GroupOfPorts
@@ -25,7 +25,7 @@ class Average(Node):
 
         self.output.set_parameters(
             channels=self.input.channels,
-            frequency=self.input.epoching_frequency,
+            sampling_frequency=self.input.epoching_frequency,
             meta=self.input.meta)
 
         self.output.set_non_epoched()
@@ -33,8 +33,6 @@ class Average(Node):
         self.value = np.array([0] * len(self.input.channels))
 
         Node.log_instance(self, {'output frequency': self.input.epoching_frequency})
-
-        # TO DO terminate
 
     def update(self):
         for epoch in self.input:
@@ -46,41 +44,54 @@ class Average(Node):
 
 class UnivariateStat(Node):
     """Mean, Variance, Median, etc. on the incoming epoched Signal
-    perform calculation on each coming epoch and saved last value in value
-    attribute
+    perform calculation on each coming epoch and save last value in value
+    attribute and update the output
     Attributes:
-      - output: output GroupOfPorts
-      - value: last value calculated (on the last epoch come)
+      - output (Port): signal output port
+      - value (float): last value calculated (on the last epoch come)
     Args:
-      - input (Port): port of incoming data
+      - input (Port): port of incoming epoched data
       - stat (str):
+      - quantile (float between 0 and 1): default is None, used if stat is 'quantile',
+        precise the quantile to calculate
+      - iqr_quantile (list of two float between 0 and 1): default is [None, None], used
+        if stat is 'iqr', precise the limit of range
+
+    Example: UnivariateStat(Port18, 'mean')
+             UnivariateStat(Port18, 'quantile', quantile=0.23)
+             UnivariateStat(Port18, 'iqr', iqr_quantile=[0.23, 0.78])
+
     """
 
-    def __init__(self, input_port, stat, q=None, q1=None, q2=None):
+    def __init__(self, input_port, stat, quantile=None, iqr_quantile=[None, None]):
         Node.__init__(self, input_port)
 
-        assert self.input.is_epoched
+        assert self.input.data_type == 'epoch'
 
         assert stat in ['mean', 'min', 'max', 'range', 'std', 'median', 'quantile', 'iqr']
         self._stat = stat
 
         self.output.set_parameters(
+            data_type='signal',
             channels=self.input.channels,
-            frequency=self.input.epoching_frequency,
-            meta=self.input.meta)
-        self.output.set_non_epoched()
+            sampling_frequency=self.input.epoching_frequency,
+            meta=self.input.meta
+        )
 
+        # value attribute in initialized at 0
         self.value = np.array([0] * len(self.input.channels))
 
         if self._stat == 'quantile':
-            assert 0 <= q and q <= 1
-            self._q = q
+            assert 0 <= quantile and quantile <= 1
+            self._q = quantile
             Node.log_instance(self, {
                 'output frequency': self.input.epoching_frequency,
                 'stat': self._stat,
                 'quantile': self._q})
 
         elif self._stat == 'iqr':
+            q1 = iqr_quantile[0]
+            q2 = iqr_quantile[1]
             assert 0 <= q1 and q1 <= q2 and q2 <= 1
             self._q1 = q1
             self._q2 = q2
@@ -118,32 +129,31 @@ class UnivariateStat(Node):
 
 
 class Windowing(Node):
-    """Mean, Variance, Median, etc. on the incoming epoched Signal
-    perform calculation on each coming epoch and saved last value in value
-    attribute
+    """Apply a windowing function to the input epohed signal
     Attributes:
-      - output: output GroupOfPorts
-      - value: last value calculated (on the last epoch come)
+      - output (Port): epoch output port
     Args:
-      - input (Port): port of incoming data
-      - stat (str):
+      - input (Port): port of epoched incoming data
+      - window (str): to be choosen between ['blackman', 'hanning', 'hamming', 'triang']
+
+    Example: Windowing(Port48, 'blackman')
     """
 
     def __init__(self, input_port, window):
         Node.__init__(self, input_port)
 
-        assert self.input.is_epoched
+        assert self.input.data_type == 'epoch'
 
         assert window in ['blackman', 'hanning', 'hamming', 'triang']
         self._window = window
 
         self.output.set_parameters(
+            data_type='epoch',
             channels=self.input.channels,
-            frequency=self.input.frequency,
-            meta=self.input.meta)
-
-        self.output.set_epoched(
-            epoching_frequency=self.input.epoching_frequency)
+            sampling_frequency=self.input.sampling_frequency,
+            meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency
+        )
 
         self._buffered_windows = {}
 

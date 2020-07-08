@@ -1,14 +1,19 @@
 import sys
 
-sys.path.append('..')
 import numpy as np
 
-from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate, feature, function)
+sys.path.append('..')
 
-lsl_marker_reception = io.LslReceive('type', 'Markers')
-lsl_reception = generate.Generator('simulation', 16, 500)
+from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate, feature, function, display)
 
-chans = select.ChannelSelector(lsl_reception.output, 'index', [1, 2, 3, 4])
+
+# lsl_marker_reception = io.LslReceive('type', 'Markers')
+lsl_reception = generate.Generator('simulation', 32, 500, min_chunk_size=1)
+my_func = select.SpatialFilter(lsl_reception.output, '../examples/csp_ft.cfg')
+plot = display.Plot(my_func.output)
+
+
+'''chans = select.ChannelSelector(lsl_reception.output, 'index', [1, 2, 3, 4])
 
 butter_filter = filter.ButterFilter(chans.output, 8, 12)
 
@@ -23,8 +28,9 @@ left_features = feature.FeatureAggregator(logpower1.output, '1')
 tocsv = store.ToCsv(left_features.output, 'myfile')
 average_epoch2 = epoching.StimulationBasedEpoching(log_epoch.output, lsl_marker_reception.output, 770, 0, 2)
 logpower = function.ApplyFunction(average_epoch2.output, lambda x: np.log1p(x))
+plt = display.Plot(logpower.output, 10, [1])
 right_features = feature.FeatureAggregator(logpower.output, '0')
-tocsv2 = store.ToCsv(right_features.output, 'myfile')
+tocsv2 = store.ToCsv(right_features.output, 'myfile')'''
 # featurevector = feature.featureMerger(left_features, right_features, ..., n_features)
 '''toCSV(featurevector.output)
 loaded_model = joblib.load('lda_model.sav')

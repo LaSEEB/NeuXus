@@ -10,12 +10,11 @@ from modules.node import Node
 class TimeBasedEpoching(Node):
     """Generates signal 'slices' or 'blocks' having a specified duration and interval
     Attributes:
-        input_: get DataFrame and meta from input_ port
-        output: output Port used to share data to other nodes
+      - output: output Port used to share data to other nodes
     Args:
-        input_port: Input signal received in block
-        duration: Length of epoched signal
-        interval: Time interval between two consecutive epochs for signal
+      - input_port (Port): Input signal (type 'signal' or 'epoch')
+      - duration (float): Length of epoched signal
+      - interval (float): Time interval between two consecutive epochs for signal
     """
 
     def __init__(self, input_port, duration, interval):
@@ -25,20 +24,21 @@ class TimeBasedEpoching(Node):
         self.interval = interval
 
         self.output.set_parameters(
+            data_type='epoch',
             channels=self.input.channels,
-            frequency=self.input.frequency,
-            meta=self.input.meta)
-
-        self.output.set_epoched(
-            epoching_frequency=1 / interval)
+            sampling_frequency=self.input.sampling_frequency,
+            meta=self.input.meta,
+            epoching_frequency=1 / interval
+        )
 
         self.persistent = pd.DataFrame([], [], self.input.channels)
         self.trigger = None
         self.markers = []
 
-        Node.log_instance(self, {'duration': self.duration, 'interval': self.interval})
-
-        # TO DO terminate
+        Node.log_instance(self, {
+            'duration': self.duration,
+            'interval': self.interval
+        })
 
     def update_timing(self, min_time, max_time):
         if not self.trigger:
@@ -71,12 +71,13 @@ class TimeBasedEpoching(Node):
 
 
 class MarkerBasedSeparation(Node):
-    """Cut a continuous signal in epoch of various duration coming from Markers
+    """Cut a continuous signal in epoch, separation of epoch are set each time a Marker come
     Attributes:
-        input_: get DataFrame and meta from input_ port
-        output_: output GroupOfPorts
+        output (Port): epoched output port
     Args:
-        duration: duration of epochs
+      - input_port (Port): input signal
+      - marker_input_port (Port): input markers
+
     """
 
     def __init__(self, input_port, marker_input_port):
@@ -85,11 +86,10 @@ class MarkerBasedSeparation(Node):
         self.marker_input = marker_input_port
 
         self.output.set_parameters(
+            data_type='epoch',
             channels=self.input.channels,
-            frequency=self.input.frequency,
-            meta=self.input.meta)
-
-        self.output.set_epoched(
+            sampling_frequency=self.input.sampling_frequency,
+            meta=self.input.meta,
             epoching_frequency=0)
 
         # persitent is data of a non-complete epoch
@@ -99,8 +99,6 @@ class MarkerBasedSeparation(Node):
         self.current_name = 'first epoch'
 
         Node.log_instance(self, {'marker port': self.marker_input.id})
-
-        # TO DO terminate
 
     def get_end_time(self):
         """Test if a new marker arrived and return its timestamp as end of last epoch
@@ -143,12 +141,16 @@ class MarkerBasedSeparation(Node):
 
 
 class StimulationBasedEpoching(Node):
-    """Cut a continuous signal in epoch of various duration coming from Markers
+    """Slices signal into epoch of a desired length following a stimulation event
     Attributes:
-        input_: get DataFrame and meta from input_ port
-        output_: output GroupOfPorts
+      - output (Port): epoched output port
     Args:
-        duration: duration of epochs
+      - input_port (Port): input signal
+      - marker_input_port (Port): input markers
+      - stimulation (int or float or str): stimulation that trigger a new epoching,
+        the other event will be ignored, be carefull with the type of stimulation
+      - offset (float): offset to wait before starting epoching when receiving the stimulation
+      - duration (float): duration of epochs
     """
 
     def __init__(self, input_port, marker_input_port, stimulation, offset, duration):
@@ -157,12 +159,12 @@ class StimulationBasedEpoching(Node):
         self.marker_input = marker_input_port
 
         self.output.set_parameters(
+            data_type='epoch',
             channels=self.input.channels,
-            frequency=self.input.frequency,
-            meta=self.input.meta)
-
-        self.output.set_epoched(
-            epoching_frequency=0)
+            sampling_frequency=self.input.sampling_frequency,
+            meta=self.input.meta,
+            epoching_frequency=0
+        )
 
         self.stimulation = stimulation
         self.duration = duration

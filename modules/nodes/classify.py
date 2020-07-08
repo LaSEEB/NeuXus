@@ -8,26 +8,35 @@ from modules.node import Node
 
 
 class Classify(Node):
-    """TO DO
+    """Load a model from a joblib save and classify all input vector
     Attributes:
-        input_: get DataFrame and meta from input_ port
-        output_: output GroupOfPorts
+      - output (Port): signal output port
     Args:
-        duration: duration of epochs
+      - model_file (str): path to the model file
+
+    Example: Classify(Port4, 'LDA.sav')
+
     """
 
     def __init__(self, input_port, model_file):
         Node.__init__(self, input_port)
+        # load model from save
         self._loaded_model = joblib.load(model_file)
 
+        # verify the input signal type
+
+        # set the ouput Port parameters
         self.output.set_parameters(
+            data_type='signal',
             channels=['class'],
-            frequency=self.input.frequency,
-            meta=self.input.meta)
-
-        Node.log_instance(self, {'model': self._loaded_model})
-
-        # TO DO terminate
+            sampling_frequency=self.input.sampling_frequency,
+            meta=self.input.meta
+        )
+        # log the new instance
+        Node.log_instance(self, {
+            'path to model': model_file,
+            'model': self._loaded_model
+        })
 
     def update(self):
         for vector in self.input:
@@ -49,7 +58,7 @@ class Classify(Node):
 
         self.output.set_parameters(
             channels=self.input.channels,
-            frequency=self.input.frequency,
+            frequency=self.input.sampling_frequency,
             meta=self.input.meta)
 
         Node.log_instance(self, {'model': self._loaded_model})

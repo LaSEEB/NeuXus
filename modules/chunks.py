@@ -8,7 +8,7 @@ sys.path.append('..')
 from modules.keepref import KeepRefs
 
 
-class IterChunks(KeepRefs):
+class Port(KeepRefs):
     """Class for creating link between nodes, it shares the data between them
     A port is called by iteration ie:
     for chunk in my_port:
@@ -20,22 +20,25 @@ class IterChunks(KeepRefs):
     _count = 0
 
     def __init__(self, is_epoched=False):
-        super(IterChunks, self).__init__()
+        super(Port, self).__init__()
         self.clear()
         self.is_epoched = False
         self.epoching_frequency = None
-        IterChunks._count += 1
-        self.id = f'Port{IterChunks._count}'
+        Port._count += 1
+        self.id = f'Port{Port._count}'
 
     def clear(self):
         """Clear all data from _data"""
         self._data = []
 
-    def set_parameters(self, channels, frequency, meta={}):
+    def set_parameters(self, data_type, channels, sampling_frequency, meta={}, epoching_frequency=None):
         """Set channels, samplingfrequency and meta data"""
+        assert data_type in ['signal', 'epoch', 'vector']
+        self.type = data_type
         self.channels = channels
-        self.frequency = frequency
+        self.sampling_frequency = sampling_frequency
         self.meta = meta
+        self.epoching_frequency = epoching_frequency
 
     def set_epoched(self, epoching_frequency):
         self.is_epoched = True
@@ -58,7 +61,7 @@ class IterChunks(KeepRefs):
         self._data.append(df)
 
     def log_parameters(self):
-        to_log = f'{self.id} {self.frequency} {self.is_epoched} {self.epoching_frequency} {self.channels}'
+        to_log = f'{self.id} {self.frequency} {self.data} {self.epoching_frequency} {self.channels}'
         logging.debug(to_log)
 
     def __iter__(self):

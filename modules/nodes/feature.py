@@ -1,20 +1,20 @@
 import sys
 
-import pandas as pd
-
 sys.path.append('../..')
 
 from modules.node import Node
 
 
 class FeatureAggregator(Node):
-    """Convert a signal to a CSV file
+    """Each chunk of input will be catenated into one feature vector that can
+    be used for classification. It can specified a class as first vector coordinate
+    Attributes:
+      - output (Port): vector output Port
     Args:
-      - file (str): CSV file to write
-      - sep (str): Separator between rows, default is ';'
-      - decimal (str): Character recognized as decimal separator, default is ','
+      - input (Port): input signal
+      - class_tag (str): class tag to add at first coordinate
 
-    example: ToCsv(port4, 'log.csv')
+    example: FeatureAggregator(port4, 'RIGHT')
 
     """
 
@@ -25,12 +25,18 @@ class FeatureAggregator(Node):
             self._channels = ['class'] + self.input.channels
         else:
             self._channels = self.input.channels
-        self.output.set_parameters(
-            channels=self._channels,
-            frequency=self.input.frequency,
-            meta=self.input.meta)
 
-        Node.log_instance(self, {'tag': self._tag, 'coordinates': self._channels})
+        self.output.set_parameters(
+            data_type='vector',
+            channels=self._channels,
+            sampling_frequency=self.input.sampling_frequency,
+            meta=self.input.meta
+        )
+
+        Node.log_instance(self, {
+            'tag': self._tag,
+            'coordinates': self._channels
+        })
         self._i = 0
 
     def update(self):

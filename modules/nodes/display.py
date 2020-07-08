@@ -1,19 +1,15 @@
 import sys
 import os
 
-import logging
-mpl_logger = logging.getLogger('matplotlib')
-mpl_logger.setLevel(logging.WARNING)
-
 import pandas as pd
 from matplotlib import style
 import multiprocessing as mp
-
 import matplotlib.pyplot as plt
-
 import matplotlib.animation as animation
-import numpy as np
+import logging
 
+mpl_logger = logging.getLogger('matplotlib')
+mpl_logger.setLevel(logging.WARNING)
 
 sys.path.append('../..')
 
@@ -97,7 +93,7 @@ class Plot(Node):
     """Display a signal (epoched or not) in a matplotlib window
     Args:
       - input_port (Port): input signal
-      - duration (float): define observation segment
+      - duration (float): define the length of the observation segment
       - channels (str or list): if 'all', display all channels, else diplay specified
         channels according the way (index or name)
       - way (str): 'name' or 'index', specified the way to choose channels
@@ -119,15 +115,19 @@ class Plot(Node):
 
         self._duration = float(duration)
 
+        # create the plot process
         self.plot_pipe, plotter_pipe = mp.Pipe()
         self.plotter = ProcessPlotter(
-            self._duration, self._channels, self.input.frequency)
+            self._duration, self._channels, self.input.sampling_frequency)
         self.plot_process = mp.Process(
             target=self.plotter, args=(plotter_pipe,), daemon=True)
         self.plot_process.start()
 
-        Node.log_instance(self, {'duration': self._duration,
-                                 'channels': self._channels})
+        # Log new instance
+        Node.log_instance(self, {
+            'duration': self._duration,
+            'channels': self._channels
+        })
 
     def update(self):
         for chunk in self.input:

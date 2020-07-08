@@ -5,7 +5,7 @@ import logging
 
 sys.path.append('..')
 
-from modules.chunks import IterChunks
+from modules.chunks import Port
 from modules.keepref import KeepRefsFromParent
 from modules.registry import *
 
@@ -19,7 +19,7 @@ class Node(KeepRefsFromParent, ABC):
         super(Node, self).__init__()
         self.input = input_port
         if add_output:
-            self.output = IterChunks()
+            self.output = Port()
         else:
             self.output = None
         # get name of subclass (for example ChannelSelector)
@@ -32,10 +32,6 @@ class Node(KeepRefsFromParent, ABC):
         self._id = f'{subclass}{Node._counter[subclass]}'
 
         self._nb_iter = 0
-
-        if self.input and self.input.is_epoched and self.output:
-            self.output.set_epoched(
-                epoching_frequency=self.input.epoching_frequency)
 
     def log_instance(self, param):
         to_log = f'Instantiate {self._id} with attributes:'

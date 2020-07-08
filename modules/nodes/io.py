@@ -33,14 +33,17 @@ class LslSend(Node):
         self._type = type
         self._format = format
         self.outlet = None
-        self._frequency = self.input.frequency
+        self._frequency = self.input.sampling_frequency
         if not uuid_:
             uuid_ = str(uuid.uuid4())
         self.uuid = uuid_
         self.connect()
 
         Node.log_instance(self, {
-                          'name': self._name, 'frequency': self._frequency, 'channels': self.input.channels})
+            'name': self._name,
+            'frequency': self._frequency,
+            'channels': self.input.channels
+        })
 
     def connect(self):
         '''Create an outlet for streaming data'''
@@ -78,14 +81,22 @@ class LslSend(Node):
 class LslReceive(Node):
     """Receive from a LSL stream.
     Attributes:
-        output_: provides DataFrame and meta
+      - input: input port
     Args:
-        sync (string, None): The method used to synchronize timestamps. Use ``local`` if you receive the stream from another application on the same computer. Use ``network`` if you receive from another computer.
-        max_samples (int): The maximum number of samples to return per call.
+      - prop (str): property used to resolve the stream (for example 'name')
+      - value (str): value associated to prop for resolving stream
+      - datatype (str): type of output value among ['epoch', 'signal', 'vector', 'marker']
+      - sync (string, None): The method used to synchronize timestamps. Use ``local`` if
+        you receive the stream from another application on the same computer.
+        Use ``network`` if you receive from another computer.
+      - max_samples (int): The maximum number of samples to return per call. Default is 4096
+      - timeout (float): time for the software to wait the stream
     """
 
-    def __init__(self, prop, value, sync="local", max_samples=1024 * 4, timeout=10.0):
+    def __init__(self, prop, value, data_type, sync="local", max_samples=1024 * 4, timeout=10.0):
         Node.__init__(self, None)
+        assert data_type in ['epoch', 'signal', 'vector', 'marker']
+        self._data_type = data_type
         self.inlet = None
         self._prop = prop
         self._value = value
@@ -96,8 +107,9 @@ class LslReceive(Node):
 
         self.connect()
 
-        Node.log_instance(
-            self, {'channels': self.channels, 'sampling frequency': self._frequency})
+        Node.log_instance(self, {
+            'channels': self.channels,
+            'sampling frequency': self._frequency})
 
     def connect(self):
         if not self.inlet:
@@ -132,8 +144,9 @@ class LslReceive(Node):
             self._frequency = info.nominal_srate()
 
             self.output.set_parameters(
+                data_type=self.data_type,
                 channels=channels,
-                frequency=self._frequency,
+                sampling_frequency=self._frequency,
                 meta=self.meta)
 
     def update(self):
@@ -159,14 +172,14 @@ class LslReceive(Node):
 
 
 class RdaReceive(Node):
-    """Receive from a RDA stream.
+    """Receive a signal from RDA stream
     Attributes:
-        output(Port): output port
+      - output(Port): output port
     Args:
-        rdaport(int): rdaport to connect with, default is 51254
-        offset(float): offset (in second) to apply to incoming data timestamps
-        host(str): RDA host
-        timeout(float): timeout for getting RDA stream
+      - rdaport(int): rdaport to connect with, default is 51254
+      - offset(float): offset (in second) to apply to incoming data timestamps
+      - host(str): RDA host, default is 'localhost', it could be the IP adress of the host
+      - timeout(float): timeout for getting RDA stream
 
     Example:
         RdaReceive()
@@ -186,8 +199,9 @@ class RdaReceive(Node):
         Node.log_instance(
             self, {'channels': self._channels, 'sampling frequency': self._frequency})
         self.output.set_parameters(
+            data_type='signal',
             channels=self._channels,
-            frequency=self._frequency,
+            sampling_frequency=self._frequency,
             meta='')
         self._persistent = b''
         self._last_block = -1

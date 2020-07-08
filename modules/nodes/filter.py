@@ -2,7 +2,6 @@ import sys
 
 from scipy import signal
 import numpy as np
-import logging
 
 sys.path.append('../..')
 
@@ -18,18 +17,23 @@ class ButterFilter(Node):
         input: get DataFrame and meta from input_ port
         lowcut (float): lowest frequence cut in Hz
         highcut (float): highest frequence cut in Hz
-        order (int): order to be applied on the butter filter (recommended < 16)
+        order (int): order to be applied on the butter filter (recommended < 16),
+        default value is 4
+
+    Example: ButterFilter(Port4, 8, 12, order=5)
     """
 
     def __init__(self, input_port, lowcut, highcut, order=4):
         Node.__init__(self, input_port)
 
         self.output.set_parameters(
+            data_type=self.input.data_type,
             channels=self.input.channels,
-            frequency=self.input.frequency,
-            meta=self.input.meta)
+            sampling_frequency=self.input.sampling_frequency,
+            meta=self.input.meta,
+        )
 
-        fs = self.input.frequency
+        fs = self.input.sampling_frequency
         nyq = 0.5 * fs
         low = lowcut / nyq
         high = highcut / nyq
@@ -46,7 +50,11 @@ class ButterFilter(Node):
         len_to_conserve = max(len(self._a), len(self._b)) - 1
         self._zi = np.zeros((len(self.input.channels), len_to_conserve))
 
-        Node.log_instance(self, {'lowcut': lowcut, 'highcut': highcut, 'order': order})
+        Node.log_instance(self, {
+            'lowcut': lowcut,
+            'highcut': highcut,
+            'order': order
+        })
 
     def update(self):
         for chunk in self.input:

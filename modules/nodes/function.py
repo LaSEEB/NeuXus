@@ -6,25 +6,47 @@ from modules.node import Node
 
 
 class ApplyFunction(Node):
-    """TO DO
+    """Apply function along rows
     Attributes:
-        input_: get DataFrame and meta from input_ port
-        output_: output GroupOfPorts
+      - output: output Port
     Args:
-        duration: duration of epochs
+      - function: function to apply, the function can take in input a row or
+        a np.array of shape number of input channels as columns and 1 row
+        To perform calculation with an unvariateState output it is possible to include
+        the .value attribute of this Node (see example)
+
+    Example:
+        def f(x):
+            return x - 4
+        ApplyFunction(port4, f)
+        or
+        def f(x):
+            return x - np.array([3, 2, 5, -1])
+        ApplyFunction(port4, f)
+        or
+        stat = UnivariateStat(port5, 'mean')
+        def f(x):
+            return x - stat.value
+        ApplyFunction(port4, f)
+
     """
 
     def __init__(self, input_port, function):
         Node.__init__(self, input_port)
 
+        assert self.input.data_type in ['epoch', 'signal']
+
         self.output.set_parameters(
+            data_type=self.input.data_type,
             channels=self.input.channels,
-            frequency=self.input.frequency,
+            sampling_frequency=self.input.sampling_frequency,
             meta=self.input.meta)
 
         self.function = function
 
-        Node.log_instance(self, {'function': self.function})
+        Node.log_instance(self, {
+            'function': self.function
+        })
 
         # TO DO terminate
 
