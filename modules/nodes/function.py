@@ -40,7 +40,8 @@ class ApplyFunction(Node):
             data_type=self.input.data_type,
             channels=self.input.channels,
             sampling_frequency=self.input.sampling_frequency,
-            meta=self.input.meta)
+            meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency)
 
         self.function = function
 

@@ -40,7 +40,8 @@ class ChannelSelector(Node):
             data_type=self.input.data_type,
             channels=self._channels,
             sampling_frequency=self.input.sampling_frequency,
-            meta=self.input.meta)
+            meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency)
 
         Node.log_instance(self, {'selected channels': self._channels})
 
@@ -119,7 +120,8 @@ class SpatialFilter(Node):
             data_type=self.input.data_type,
             channels=self._channels,
             sampling_frequency=self.input.sampling_frequency,
-            meta=self.input.meta)
+            meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency)
 
         Node.log_instance(self, {'matrix': str_matrix})
 
@@ -170,7 +172,8 @@ class ReferenceChannel(Node):
             data_type=self.input.data_type,
             channels=self._channels,
             sampling_frequency=self.input.sampling_frequency,
-            meta=self.input.meta)
+            meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency)
 
         Node.log_instance(self, {'reference': self._ref})
 
@@ -201,7 +204,8 @@ class CommonAverageReference(Node):
             data_type=self.input.data_type,
             channels=self.input.channels,
             sampling_frequency=self.input.sampling_frequency,
-            meta=self.input.meta)
+            meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency)
 
         Node.log_instance(self, {})
 

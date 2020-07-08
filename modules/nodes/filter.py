@@ -31,6 +31,7 @@ class ButterFilter(Node):
             channels=self.input.channels,
             sampling_frequency=self.input.sampling_frequency,
             meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency
         )
 
         fs = self.input.sampling_frequency
