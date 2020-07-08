@@ -144,7 +144,7 @@ class LslReceive(Node):
             self._frequency = info.nominal_srate()
 
             self.output.set_parameters(
-                data_type=self.data_type,
+                data_type=self._data_type,
                 channels=channels,
                 sampling_frequency=self._frequency,
                 meta=self.meta)

@@ -1,14 +1,15 @@
 import sys
 
+import logging
+
+mpl_logger = logging.getLogger('matplotlib')
+mpl_logger.setLevel(logging.WARNING)
+
 import pandas as pd
 from matplotlib import style
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import logging
-
-mpl_logger = logging.getLogger('matplotlib')
-mpl_logger.setLevel(logging.WARNING)
 
 sys.path.append('../..')
 

@@ -41,11 +41,17 @@ class TimeBasedEpoching(Node):
         })
 
     def update_timing(self, min_time, max_time):
-        if not self.trigger:
+        if not self.trigger or self.input.data_type == 'epoch':
             self.trigger = min_time
-        while self.trigger < max_time:
-            self.markers.append((self.trigger, self.trigger + self.duration))
-            self.trigger += self.interval
+        if self.input.data_type == 'epoch':
+            while self.trigger + self.duration < max_time:
+                self.markers.append((self.trigger, self.trigger + self.duration))
+                self.trigger += self.interval
+
+        elif self.input.data_type == 'signal':
+            while self.trigger < max_time:
+                self.markers.append((self.trigger, self.trigger + self.duration))
+                self.trigger += self.interval
 
     def update(self):
         # update persistence
@@ -66,7 +72,7 @@ class TimeBasedEpoching(Node):
                     self.output.set_from_df(epoch)
                     self.markers.remove(marker)
 
-        if len(self.markers) == 0:
+        if len(self.markers) == 0 or self.input.data_type == 'epoch':
             self.persistent = pd.DataFrame([], [], self.input.channels)
 
 

@@ -33,8 +33,8 @@ class Port(KeepRefs):
 
     def set_parameters(self, data_type, channels, sampling_frequency, meta={}, epoching_frequency=None):
         """Set channels, samplingfrequency and meta data"""
-        assert data_type in ['signal', 'epoch', 'vector']
-        self.type = data_type
+        assert data_type in ['signal', 'epoch', 'vector', 'marker']
+        self.data_type = data_type
         self.channels = channels
         self.sampling_frequency = sampling_frequency
         self.meta = meta
@@ -61,7 +61,7 @@ class Port(KeepRefs):
         self._data.append(df)
 
     def log_parameters(self):
-        to_log = f'{self.id} {self.frequency} {self.data} {self.epoching_frequency} {self.channels}'
+        to_log = f'{self.id} {self.sampling_frequency} {self.data_type} {self.epoching_frequency} {self.channels}'
         logging.debug(to_log)
 
     def __iter__(self):
