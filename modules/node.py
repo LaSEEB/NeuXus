@@ -47,7 +47,7 @@ class Node(KeepRefsFromParent, ABC):
         if self.input:
             for chunk_or_epoch in self.input:
                 if self._nb_iter < NB_ITER:
-                    logging.debug(f'Input chunk of {self._id}\n{get_chunk_first_value(chunk_or_epoch)}')
+                    logging.debug(f'Input chunk of {self._id}\n{chunk_or_epoch}')
                     self._nb_iter += 1
 
     @abstractmethod
@@ -56,10 +56,4 @@ class Node(KeepRefsFromParent, ABC):
             pass
 
     def terminate(self):
-        pass
-
-    def set_queue(self, q):
-        self._q = q
-
-    def second_init(self):
         pass

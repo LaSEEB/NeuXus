@@ -40,13 +40,6 @@ class Port(KeepRefs):
         self.meta = meta
         self.epoching_frequency = epoching_frequency
 
-    def set_epoched(self, epoching_frequency):
-        self.is_epoched = True
-        self.epoching_frequency = epoching_frequency
-
-    def set_non_epoched(self):
-        self.is_epoched = False
-
     def set(self, rows, timestamps, columns=None):
         """Set from raw data"""
         if columns:

@@ -10,4 +10,4 @@ pd.set_option("display.max_rows", 10)
 
 
 def get_chunk_first_value(chunk):
-    return chunk # str(chunk.iloc[-NB_LINE - 1:-1, :])
+    return chunk

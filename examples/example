@@ -1,4 +1,0 @@
---- # Matrix of coefficient for SurfaceLaplacian
-OC1: [1, 1, 0, 4e-9]
-OC2: [4, 2, 4, -2]
-...
