@@ -16,15 +16,17 @@ lsl_signal = io.LslReceive('name', 'LiveAmpSN-054207-0168', data_type='signal', 
 lsl_markers = io.LslReceive('type', 'Markers', data_type='marker')
 
 #channel selection
-chans = select.ChannelSelector(lsl_signal.output, 'index', [8, 25])
+selected_chans = select.ChannelSelector(lsl_signal.output, 'index', [8, 25])
 
 #spatial filtering
 '''
 matrix = {
         'OC2': [1, 1, 0, 1],
         'OC3': [1, 0, 1, 1]}
-laplacian_filter =  select.SpatialFilter(chans.output, matrix)
+laplacian_filter =  select.SpatialFilter(selected_chans.output, matrix)
 '''
+# load CSP weights from config file
+#csp_filter = select.SpatialFilter(selected_chans.output, '../examples/csp_ft.cfg')
 
 #temporal filtering
 butter_filter = filter.ButterFilter(chans.output, 8, 12)

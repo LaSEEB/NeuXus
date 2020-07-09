@@ -15,16 +15,16 @@ import glob
 path = os.system('pwd')
 extension = 'csv'
 file = glob.glob('*.{}'.format(extension))[0]
-
+#load data
 df = pd.read_csv(file, delimiter=';',  decimal=",", header=0)
 print(df.head(3))
 
-
-X = df.values[:,2:df.shape[1]].astype(float)
-y = df['class'].values
+#assign array of samples
+X = df.values[:,2:df.shape[1]].astype(float) #features
+y = df['class'].values #class labels
 
 lda = LinearDiscriminantAnalysis()
-lda.fit(X, y)
+lda.fit(X, y) #Fit LDA model
 
 print('Score: ',lda.score(X, y))
 
