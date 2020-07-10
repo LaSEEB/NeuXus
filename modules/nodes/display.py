@@ -1,11 +1,12 @@
 import sys
 
 import logging
+from tkinter import *
+import pandas as pd
 
 mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
 
-import pandas as pd
 from matplotlib import style
 import multiprocessing as mp
 import matplotlib.pyplot as plt
@@ -17,9 +18,24 @@ from modules.node import Node
 
 style.use('fivethirtyeight')
 
+"""
+Author: Simon Legeay, LaSEEB/CentraleSupélec
+e-mail: legeay.simon.sup@gmail.com
+
+
+Gathers all nodes for signal display and Graz
+Includes:
+    ProcessPlotter
+    Plot(Node)
+    Markers
+    CustomCanvas
+    ProcessGraz
+    Graz(Node)
+"""
+
 
 class ProcessPlotter:
-    """Class used for plotting signals"""
+    """Class used for plotting signals, launched in a subprocess"""
 
     def __init__(self, duration, channels, frequency):
         self.trigger = 0
@@ -141,5 +157,169 @@ class Plot(Node):
     def terminate(self):
         try:
             self.plot_pipe.send((None, None, None))
+        except BrokenPipeError:
+            pass
+
+
+MARKERS = {
+    'show_cross': 786,
+    'show_rigth_arrow': 770,
+    'show_left_arrow': 769,
+    'hide_arrow': 781,
+    'hide_cross': 800,
+    'exit_': 1010,
+}
+
+
+class CustomCanvas(Canvas):
+    """Custom Canvas fitting with graz visualization with function to update the content
+    according the windows size, and plot functions"""
+
+    def __init__(self, parent, **kwargs):
+        Canvas.__init__(self, parent, **kwargs)
+        self.pack(fill=BOTH, expand=1)
+        self.bind("<Configure>", self.on_resize)
+
+        self.height = self.winfo_reqheight()
+        self.width = self.winfo_reqwidth()
+
+    def show_cross(self):
+        """Show cross on the window"""
+        x1 = int(self.width / 3)
+        x2 = int(self.width * 2 / 3)
+        x3 = int(self.width / 2)
+        y1 = int(self.height / 2)
+        y2 = int(self.height / 3)
+        y3 = int(self.height * 2 / 3)
+        self.create_line(x1, y1, x2, y1,
+                         fill="white", width=1, tags='cross1')
+        self.create_line(x3, y2, x3, y3,
+                         fill="white", width=1, tags='cross2')
+
+    def show_left_arrow(self):
+        """Show red arrow on the window"""
+        x3 = int(self.width / 2)
+        x4 = int(self.width * 7 / 18)
+        y1 = int(self.height / 2)
+        w = int(self.width / 25)
+        s = f"{w} {w} {int(0.7 * w)}"
+        self.create_line(x4, y1, x3, y1,
+                         fill="red", width=w, tags='ra',
+                         arrow='first', arrowshape=s)
+
+    def show_rigth_arrow(self):
+        """Show red arrow on the window"""
+        x3 = int(self.width / 2)
+        x5 = int(self.width * 11 / 18)
+        y1 = int(self.height / 2)
+        w = int(self.width / 25)
+        s = f"{w} {w} {int(0.7 * w)}"
+        self.create_line(x5, y1, x3, y1,
+                         fill="red", width=w, tags='la',
+                         arrow='first', arrowshape=s)
+
+    def hide_arrow(self):
+        """Hide all arrows on the window"""
+        self.delete('la')
+        self.delete('ra')
+
+    def hide_cross(self):
+        """Hide the cross on the window"""
+        self.delete('cross1')
+        self.delete('cross2')
+
+    def on_resize(self, event):
+        # determine the ratio of old width/height to new width/height
+        wscale = float(event.width) / self.width
+        hscale = float(event.height) / self.height
+        self.width = event.width
+        self.height = event.height
+        # resize the canvas
+        self.config(width=self.width, height=self.height)
+        # rescale all the objects tagged with the "all" tag
+        self.scale("all", 0, 0, wscale, hscale)
+
+
+class ProcessGraz():
+    """Create a new window containing the Graz visualization
+    Launched in a subprocess"""
+
+    def __init__(self):
+        pass
+
+    def terminate(self):
+        self.root.destroy()
+
+    def call_back(self):
+        if self.pipe.poll():
+            sample = self.pipe.recv()
+            if sample[0] == MARKERS['show_cross']:
+                self.myCanvas.show_cross()
+            elif sample[0] == MARKERS['show_rigth_arrow']:
+                self.myCanvas.show_rigth_arrow()
+            elif sample[0] == MARKERS['show_left_arrow']:
+                self.myCanvas.show_left_arrow()
+            elif sample[0] == MARKERS['hide_arrow']:
+                self.myCanvas.hide_arrow()
+            elif sample[0] == MARKERS['hide_cross']:
+                self.myCanvas.hide_cross()
+            elif sample[0] == MARKERS['exit_']:
+                self.terminate()
+                return
+        self.root.after(10, self.call_back)
+
+    def __call__(self, pipe):
+        self.pipe = pipe
+        # initialise a window.
+        self.root = Tk()
+        self.root.config(background='black')
+        self.root.title('Graz Visualization')
+        self.root.geometry("500x350")
+
+        # create a Frame
+        myframe = Frame(self.root)
+        myframe.pack(fill=BOTH, expand=YES)
+
+        # add a canvas
+        self.myCanvas = CustomCanvas(myframe, width=425, height=2,
+                                     bg="black", highlightthickness=0)
+        self.myCanvas.pack(fill=BOTH, expand=YES)
+        self.root.after(0, self.call_back)
+        self.root.mainloop()
+
+
+class Graz(Node):
+    """Display the Graz visualization in a new tk window
+    Args:
+      - input_port (Port): input marker signal
+
+    example: Graz(port4)
+
+    """
+
+    def __init__(self, input_port):
+        Node.__init__(self, input_port, None)
+
+        # create the plot process
+        self.plot_pipe, plotter_pipe = mp.Pipe()
+        self.plotter = ProcessGraz()
+        self.plot_process = mp.Process(
+            target=self.plotter, args=(plotter_pipe,), daemon=True)
+        self.plot_process.start()
+
+        # Log new instance
+        Node.log_instance(self, {
+        })
+
+    def update(self):
+        for chunk in self.input:
+            try:
+                self.plot_pipe.send(chunk.values[0])
+            except BrokenPipeError:
+                pass
+
+    def terminate(self):
+        try:
+            self.plot_pipe.send(None)
         except BrokenPipeError:
             pass

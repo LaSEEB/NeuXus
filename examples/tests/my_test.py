@@ -2,15 +2,17 @@ import sys
 
 import numpy as np
 
-sys.path.append('..')
+sys.path.append('../..')
 
-from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate, feature, function, display)
+from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate, feature, function, display, stimulator)
 
 
-# lsl_marker_reception = io.LslReceive('type', 'Markers')
-lsl_reception = generate.Generator('simulation', 32, 500, min_chunk_size=1)
-my_func = select.SpatialFilter(lsl_reception.output, '../examples/csp_ft.cfg')
-plot = display.Plot(my_func.output)
+lsl_marker_reception = stimulator.Stimulator('../utils/stimulus/config_ov.xml')
+#d = io.LslSend(lsl_marker_reception.output, 'my stimulus', 'Markers')
+g = display.Graz(lsl_marker_reception.output)
+#lsl_reception = generate.Generator('simulation', 32, 500, min_chunk_size=1)
+#my_func = select.SpatialFilter(lsl_reception.output, '../examples/csp_ft.cfg')
+#plot = display.Plot(my_func.output)
 
 
 '''chans = select.ChannelSelector(lsl_reception.output, 'index', [1, 2, 3, 4])
