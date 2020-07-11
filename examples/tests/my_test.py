@@ -6,14 +6,17 @@ sys.path.append('../..')
 
 from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate, feature, function, display, stimulator)
 
+#lsl_reception = generate.Generator('simulation', 32, 250, min_chunk_size=1)
+rda_reception = io.RdaReceive(rdaport=51244, host="192.168.1.132")#, offset=0.125)
 
 lsl_marker_reception = stimulator.Stimulator('../utils/stimulus/config_ov.xml')
 #d = io.LslSend(lsl_marker_reception.output, 'my stimulus', 'Markers')
-g = display.Graz(lsl_marker_reception.output)
-#lsl_reception = generate.Generator('simulation', 32, 500, min_chunk_size=1)
+graz_vis = display.Graz(lsl_marker_reception.output)
 #my_func = select.SpatialFilter(lsl_reception.output, '../examples/csp_ft.cfg')
 #plot = display.Plot(my_func.output)
 
+lsl_sig_send = io.LslSend(rda_reception.output, 'eeg_data', 'EEG')
+lsl_markers_send = io.LslSend(lsl_marker_reception.output, 'ov_markers', 'Markers')
 
 '''chans = select.ChannelSelector(lsl_reception.output, 'index', [1, 2, 3, 4])
 
