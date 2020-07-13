@@ -57,7 +57,7 @@ class InvalidXml(Exception):
 
 
 def get_section(file, section):
-    """Function used for reading xml file, exttract sections such as init class"""
+    """Function used for reading xml file, extract sections such as init class"""
     try:
         section = file.getElementsByTagName(section)[0]
     except IndexError as err:
@@ -131,6 +131,17 @@ def extract_loop(file, convert):
     return loop
 
 
+def extract_intersession(file, convert):
+    """get the intersession of the scenario from the file"""
+    intersession = []
+    section = get_section(file, 'intersession')
+    for step in section.getElementsByTagName('step'):
+        name = get_data(step, 'name', 'intersession', convert)
+        duration = get_data(step, 'duration', 'intersession', float)
+        intersession.append(Marker(name, duration))
+    return intersession
+
+
 def extract_end(file, convert):
     """get the end of the scenario from the file"""
     end = []
@@ -158,6 +169,15 @@ def get_type_function(type_):
         return np.int64
 
 
+def booleen(x):
+    if x == 'True' or x == '1':
+        return True
+    elif x == 'False' or x == '0':
+        return False
+    else:
+        raise ValueError
+
+
 class Config(object):
     """object describing the config file"""
 
@@ -169,33 +189,66 @@ class Config(object):
             raise FileNotFound(file)
         except ExpatError as err:
             raise InvalidXml(file, err)
-        self.number_of_trials = get_data(file, 'number_of_trials', 'info')
-        try:
-            self.number_of_trials = float(self.number_of_trials)
-        except ValueError:
-            raise ConfigFileNotInAccordance(f'{self.number_of_trials} is not a number')
+        self.number_of_trials = get_data(file, 'number_of_trials', 'info', int)
         self.type = get_data(file, 'marker_type', 'info')
         if self.type not in VALID_TYPE:
             raise ConfigFileNotInAccordance(f'{self.type} is not an accepted type')
         self.type_function = get_type_function(self.type)
-        self.stream_name = get_data(file, 'stream_name', 'info')
         self.name = get_data(file, 'name', 'info')
         self.author = get_data(file, 'author', 'info')
+        self.session = get_data(file, 'session', 'info', int)
+        self.random = get_data(file, 'random', 'info', booleen)
 
         self.classes = extract_classes(file, self.type_function)
-        self.init = extract_init(file, self.type_function)
-        self.loop = extract_loop(file, self.type_function)
-        self.end = extract_end(file, self.type_function)
+        self._init = extract_init(file, self.type_function)
+        self._loop = extract_loop(file, self.type_function)
+        self._intersession = extract_intersession(file, self.type_function)
+        self._end = extract_end(file, self.type_function)
 
-    def create_a_new_sequence(self):
-        """Create a new random sequence of length number_of_trials * nb_of_classes
+    def create_a_new_scenario(self):
+        """Create a scenario of length number_of_trials * nb_of_classes
         with number_of_trials elements by class"""
-        sequence = self.classes * int(self.number_of_trials)
-        for i in sequence:
-            a = rd.randrange(self.number_of_trials * 2)
-            b = rd.randrange(self.number_of_trials * 2)
-            sequence[a], sequence[b] = sequence[b], sequence[a]
-        return sequence
+
+        scenario = []
+        t = 0
+        for marker in self._init:
+            scenario.append([marker.get_name(), t])
+            t += marker.get_duration()
+
+        # send loop
+        if self.random:
+            sequence = self.classes * int(self.number_of_trials)
+            for session in range(self.session):
+                for i in sequence:
+                    a = rd.randrange(self.number_of_trials * 2)
+                    b = rd.randrange(self.number_of_trials * 2)
+                    sequence[a], sequence[b] = sequence[b], sequence[a]
+                for class_ in sequence:
+                    for marker in self._loop:
+                        scenario.append([marker.get_name(class_), t])
+                        t += marker.get_duration()
+                if session != self.session - 1:
+                    for marker in self._intersession:
+                        scenario.append([marker.get_name(class_), t])
+                        t += marker.get_duration()
+        else:
+            for i in range(len(self.classes) * self.session):
+                sequence = [self.classes[i % len(self.classes)]] * self.number_of_trials
+                for class_ in sequence:
+                    for marker in self._loop:
+                        scenario.append([marker.get_name(class_), t])
+                        t += marker.get_duration()
+                if i != len(self.classes) * self.session - 1:
+                    for marker in self._intersession:
+                        scenario.append([marker.get_name(class_), t])
+                        t += marker.get_duration()
+
+        # send end
+        for marker in self._end:
+            scenario.append([marker.get_name(), t])
+            t += marker.get_duration()
+
+        return scenario
 
 
 class Marker(object):
@@ -242,28 +295,12 @@ class Stimulator(Node):
     def __init__(self, file):
         Node.__init__(self, None)
         try:
-            scenario = Config(file)
+            config = Config(file)
         except (ConfigFileNotInAccordance, FileNotFound, InvalidXml) as err:
             print(err)
             exit()
 
-        sequence = scenario.create_a_new_sequence()
-        self._scenario = []
-        self._t = 0
-        for marker in scenario.init:
-            self._scenario.append([marker.get_name(), self._t])
-            self._t += marker.get_duration()
-
-        # send loop
-        for class_ in sequence:
-            for marker in scenario.loop:
-                self._scenario.append([marker.get_name(class_), self._t])
-                self._t += marker.get_duration()
-
-        # send end
-        for marker in scenario.end:
-            self._scenario.append([marker.get_name(), self._t])
-            self._t += marker.get_duration()
+        self._scenario = config.create_a_new_scenario()
 
         self.output.set_parameters(
             data_type='marker',
@@ -272,7 +309,14 @@ class Stimulator(Node):
             meta='')
 
         Node.log_instance(self, {
-            'file': file})
+            'file': file,
+            'name': config.name,
+            'author': config.author,
+            'session': config.session,
+            'nb of trials': config.number_of_trials,
+            'classes': config.classes,
+            'random': config.random,
+            'type': config.type})
         self._start_time = None
 
     def update(self):
@@ -283,6 +327,4 @@ class Stimulator(Node):
         t = time()
         while self._scenario and t >= self._scenario[0][1]:
             self.output.set(self._scenario[0][0], [self._scenario[0][1]], ['marker'])
-            print(self._scenario[0][0], self._scenario[0][1], ['marker'])
-            print(time())
             self._scenario = self._scenario[1:]

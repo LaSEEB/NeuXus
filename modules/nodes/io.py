@@ -85,7 +85,7 @@ class LslReceive(Node):
     Args:
       - prop (str): property used to resolve the stream (for example 'name')
       - value (str): value associated to prop for resolving stream
-      - datatype (str): type of output value among ['epoch', 'signal', 'vector', 'marker']
+      - data_type (str): type of output value among ['epoch', 'signal', 'vector', 'marker']
       - sync (string, None): The method used to synchronize timestamps. Use ``local`` if
         you receive the stream from another application on the same computer.
         Use ``network`` if you receive from another computer.
