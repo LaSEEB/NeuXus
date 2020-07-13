@@ -12,6 +12,7 @@ from pylsl import (StreamInfo, StreamOutlet,
 sys.path.append('../..')
 
 from modules.node import Node
+from modules.chunks import Port
 
 
 class LslSend(Node):
@@ -196,13 +197,26 @@ class RdaReceive(Node):
 
         self._connect()
 
-        Node.log_instance(
-            self, {'channels': self._channels, 'sampling frequency': self._frequency})
         self.output.set_parameters(
             data_type='signal',
             channels=self._channels,
             sampling_frequency=self._frequency,
             meta='')
+
+        self.marker_output = Port()
+
+        self.marker_output.set_parameters(
+            data_type='marker',
+            channels=['Markers'],
+            sampling_frequency=0,
+            meta='')
+
+        Node.log_instance(self, {
+            'marquers output': self.marker_output.id,
+            'channels': self._channels,
+            'sampling frequency': self._frequency
+        })
+
         self._persistent = b''
         self._last_block = -1
         self._time = None
@@ -266,7 +280,7 @@ class RdaReceive(Node):
                     # store the rest in raw
                     raw = raw[msgsize:]
                     if msgtype == 4:  # if the message contains data do:
-                        (block, points, data) = self._extract_data(rawdata)
+                        (block, points, data, markers) = self._extract_data(rawdata)
                         # test overflow of block (ie if we do not receive a block)
                         if self._last_block != -1 and block > self._last_block + 1:
                             logging.warn(
@@ -279,6 +293,9 @@ class RdaReceive(Node):
                         if not self._time:  # set the local clock
                             self._time = time() - points / self._frequency
                         timestamps += [self._time - self._offset + i / self._frequency for i in range(points)]
+                        for marker in markers:
+                            pd.DataFrame(markers['message'], index=timestamps[markers['position']])
+                            self.marker_output.set(markers['message'], timestamps[markers['position']])
                         # self._time points to the timestamp of first row from next block
                         self._time = timestamps[-1] + self._offset + 1 / self._frequency
                 else:
@@ -348,14 +365,10 @@ class RdaReceive(Node):
         markers = []
         index = 12 + 4 * points * len(self._channels)
         for m in range(markerCount):
-            try:
-                markersize = unpack('<L', rawdata[index:index+4])
-                print(markersize)
-                (position, points2, channel) = unpack('<LLl', rawdata[index+4:index+16])
-                typedesc = self._split_string(rawdata[index+16:index+markersize[0]])
-                print(position, points2, channel)
-                print(typedesc)
-                index = index + markersize[0]
-            except IndexError:
-                 print("list index out of range")
-        return (block, points, data)
+            markersize = unpack('<L', rawdata[index:index+4])
+            (position, points2, channel) = unpack('<LLl', rawdata[index+4:index+16])
+            typedesc = self._split_string(rawdata[index+16:index+markersize[0]])
+            print(typedesc)
+            markers.append({'position': position, 'points': points2, 'message': typedesc})
+            index = index + markersize[0]
+        return (block, points, data, markers)
