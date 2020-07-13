@@ -306,15 +306,9 @@ class RdaReceive(Node):
     def _split_string(self, raw):
         """Helper function for splitting a raw array of
         zero terminated strings (C) into an array of python strings"""
-        stringlist = []
-        s = ""
-        for i in range(len(raw)):
-            if raw[i] != '\x00':
-                s += f'{raw[i]}'
-            else:
-                stringlist.append(s)
-                s = ""
-        return stringlist
+        s = [i.decode("utf-8") for i in raw.split(b'\x00')]
+        s.remove('')
+        return s
 
     def _get_properties(self, rawdata):
         """Function for extracting eeg properties from a raw data array
@@ -338,7 +332,7 @@ class RdaReceive(Node):
     def _extract_data(self, rawdata):
         """function for extracting data from message body"""
         # Extract numerical data
-        (block, points, _) = unpack('<LLL', rawdata[:12])
+        (block, points, markerCount) = unpack('<LLL', rawdata[:12])
 
         # Extract eeg data as array of floats
         data = []
@@ -349,4 +343,19 @@ class RdaReceive(Node):
                 value = unpack('<f', rawdata[index:index + 4])
                 row.append(value[0])
             data.append(row)
+
+        # Extract markers
+        markers = []
+        index = 12 + 4 * points * len(self._channels)
+        for m in range(markerCount):
+            try:
+                markersize = unpack('<L', rawdata[index:index+4])
+                print(markersize)
+                (position, points2, channel) = unpack('<LLl', rawdata[index+4:index+16])
+                typedesc = self._split_string(rawdata[index+16:index+markersize[0]])
+                print(position, points2, channel)
+                print(typedesc)
+                index = index + markersize[0]
+            except IndexError:
+                 print("list index out of range")
         return (block, points, data)
