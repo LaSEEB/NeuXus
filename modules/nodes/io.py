@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 from struct import unpack
-from socket import (AF_INET, SOCK_STREAM, socket)
+from socket import (AF_INET, SOCK_STREAM, SOCK_DGRAM, socket)
 import logging
 import uuid
 import pandas as pd
@@ -173,22 +173,51 @@ class LslReceive(Node):
             return
 
 
+class UdpSend(Node):
+    """Simple UDP client to send some data
+    Arguments:
+      - input_port (Port): inout data port
+      - ip (str): IP address of UDP server which receive data
+      - port (int): socket port
+
+    Example: UdpSend(port895, ip="127.0.0.1", port=20001)
+    """
+
+    def __init__(self, input_port, ip, port):
+        Node.__init__(self, input_port, False)
+
+        self._server_address_port   = (ip, port)
+        # Create the UDP socket
+        self._socket = socket(family=AF_INET, type=SOCK_DGRAM)
+
+        Node.log_instance(self, {
+            'IP': ip,
+            'port': port})
+
+    def update(self):
+        for chunk in self.input:
+            bytes_to_send = str.encode(chunk.to_string(header=False, index=False))
+            self._socket.sendto(bytes_to_send, self._server_address_port)
+
+
+
 class RdaReceive(Node):
     """Receive a signal from RDA stream
     Attributes:
-      - output(Port): output port
+      - output (Port): output port
+      - marker_output (Port): output marker port
     Args:
-      - rdaport(int): rdaport to connect with, default is 51254
-      - offset(float): offset (in second) to apply to incoming data timestamps
-      - host(str): RDA host, default is 'localhost', it could be the IP adress of the host
-      - timeout(float): timeout for getting RDA stream
+      - rdaport (int): rda port to connect with
+      - offset (float): offset (in second) to apply to incoming data timestamps, default is 0
+      - host (str): RDA host, default is 'localhost', it could be the IP adress of the host
+      - timeout (float): timeout in sec t get the RDA stream, default is 10
 
     Example:
         RdaReceive()
-        RdaReceive(rdaport=52136, offset=.125)
+        RdaReceive(rdaport=52136, offset=.125, host='159.10.20')
     """
 
-    def __init__(self, rdaport=51254, offset=.0, host="localhost", timeout=10.0):
+    def __init__(self, rdaport, offset=.0, host="localhost", timeout=10.0):
         Node.__init__(self, None)
         self._buf_size_max = 2**15
         self._rdaport = rdaport
