@@ -5,6 +5,7 @@ from struct import unpack
 from socket import (AF_INET, SOCK_STREAM, socket)
 import logging
 import uuid
+import pandas as pd
 from time import (time, sleep)
 from pylsl import (StreamInfo, StreamOutlet,
                    StreamInlet, resolve_byprop, pylsl)
@@ -294,8 +295,7 @@ class RdaReceive(Node):
                             self._time = time() - points / self._frequency
                         timestamps += [self._time - self._offset + i / self._frequency for i in range(points)]
                         for marker in markers:
-                            pd.DataFrame(markers['message'], index=timestamps[markers['position']])
-                            self.marker_output.set(markers['message'], timestamps[markers['position']])
+                            self.marker_output.set([marker['message'][1]] * marker['points'], [timestamps[marker['position'] + i] for i in range(int(marker['points']))])
                         # self._time points to the timestamp of first row from next block
                         self._time = timestamps[-1] + self._offset + 1 / self._frequency
                 else:
