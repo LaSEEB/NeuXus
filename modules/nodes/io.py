@@ -186,7 +186,7 @@ class UdpSend(Node):
     def __init__(self, input_port, ip, port):
         Node.__init__(self, input_port, False)
 
-        self._server_address_port   = (ip, port)
+        self._server_address_port = (ip, port)
         # Create the UDP socket
         self._socket = socket(family=AF_INET, type=SOCK_DGRAM)
 
@@ -198,7 +198,6 @@ class UdpSend(Node):
         for chunk in self.input:
             bytes_to_send = str.encode(chunk.to_string(header=False, index=False))
             self._socket.sendto(bytes_to_send, self._server_address_port)
-
 
 
 class RdaReceive(Node):
@@ -262,7 +261,7 @@ class RdaReceive(Node):
                 self._my_socket.connect((self._host, self._rdaport))
             except ConnectionRefusedError:
                 if time() - starttime > self._timeout:
-                    print('No RDA stream found')
+                    logging.info('No RDA stream found')
                     raise Exception
             else:
                 flag = False
@@ -287,7 +286,7 @@ class RdaReceive(Node):
                 self._channels = channel_names
                 return
             if time() - starttime > self._timeout:
-                print('Timeout')
+                logging.info('Timeout')
                 raise Exception
 
     def update(self):
@@ -324,7 +323,7 @@ class RdaReceive(Node):
                             self._time = time() - points / self._frequency
                         timestamps += [self._time - self._offset + i / self._frequency for i in range(points)]
                         for marker in markers:
-                            self.marker_output.set([marker['message'][1]] * marker['points'], [timestamps[marker['position'] + i] for i in range(int(marker['points']))])
+                            self.marker_output.set([marker['message'][1]] * marker['points'], [timestamps[marker['position'] + i - 1] for i in range(int(marker['points']))])
                         # self._time points to the timestamp of first row from next block
                         self._time = timestamps[-1] + self._offset + 1 / self._frequency
                 else:
@@ -345,7 +344,7 @@ class RdaReceive(Node):
         while len(returnStream) < requestedSize:
             databytes = self._my_socket.recv(requestedSize - len(returnStream))
             if databytes == '':
-                print("connection broken")
+                logging.info("connection broken")
             returnStream += databytes
         return returnStream
 
@@ -394,10 +393,9 @@ class RdaReceive(Node):
         markers = []
         index = 12 + 4 * points * len(self._channels)
         for m in range(markerCount):
-            markersize = unpack('<L', rawdata[index:index+4])
-            (position, points2, channel) = unpack('<LLl', rawdata[index+4:index+16])
-            typedesc = self._split_string(rawdata[index+16:index+markersize[0]])
-            print(typedesc)
+            markersize = unpack('<L', rawdata[index:index + 4])
+            (position, points2, channel) = unpack('<LLl', rawdata[index + 4:index + 16])
+            typedesc = self._split_string(rawdata[index + 16:index + markersize[0]])
             markers.append({'position': position, 'points': points2, 'message': typedesc})
             index = index + markersize[0]
         return (block, points, data, markers)
