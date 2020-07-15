@@ -1,4 +1,5 @@
 import sys
+import os
 
 import mne
 from time import time
@@ -31,21 +32,25 @@ class Reader(Node):
     def __init__(self, file, min_chunk_size=4):
         Node.__init__(self, None)
 
-        self._raw = read_raw_gdf(file)
-        self._sampling_frequency = self._raw.info['sfreq']
-        self._channels = self._raw.info.ch_names
-        try:
-            # to test
-            events = find_events(self._raw)
-        except ValueError:
-            events = events_from_annotations(self._raw)
-        print(self._raw.info)
+        filename, file_extension = os.path.splitext(file)
+        if file_extension in ['.gdf', '.set']:
+            if file_extension == '.gdf':
+                self._raw = read_raw_gdf(file)
+            elif file_extension == '.set':
+                self._raw = read_raw_eeglab(file)
+            self._sampling_frequency = self._raw.info['sfreq']
+            self._channels = self._raw.info.ch_names
+            try:
+                # to test
+                events = find_events(self._raw)
+            except ValueError:
+                events = events_from_annotations(self._raw)
+            print(self._raw.info)
 
-        nb_to_event = {events[1][key]: key for key in events[1]}
-        self._events = []
-        for h in events[0]:
-            self._events.append((h[0] / 1000, int(nb_to_event[h[2]])))
-        #self._event = read_raw_eeglab(event_file)
+            nb_to_event = {events[1][key]: key for key in events[1]}
+            self._events = []
+            for h in events[0]:
+                self._events.append((h[0] / 1000, float(nb_to_event[h[2]])))
 
         self.marker_output = Port()
 
