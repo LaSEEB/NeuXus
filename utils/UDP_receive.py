@@ -24,7 +24,7 @@ def main():
 
         message = bytesAddressPair[0]
         address = bytesAddressPair[1]
-        
+
         print(f"Message from Client:{message}")
         print(f"Client IP Address:{address}")
 
