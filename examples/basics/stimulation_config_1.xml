@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<!-- Random scenario -->
 <config>
         <info>
                 <name>Graz Motor Imagery with OV stim codes</name>
@@ -65,11 +66,11 @@
         <intersession>
                 <step>
                         <name>32775</name> <!-- BaselineStart -->
-                        <duration>1</duration>
+                        <duration>4</duration>
                 </step>
                 <step>
                         <name>32776</name> <!-- BaselineStop -->
-                        <duration>1</duration>
+                        <duration>0.5</duration>
                 </step>
         </intersession>
         <!-- End of the experiment -->
