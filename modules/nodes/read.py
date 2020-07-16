@@ -9,7 +9,7 @@ import pandas as pd
 
 mne.set_log_level('WARNING')
 
-from mne.io import (read_raw_gdf, read_raw_eeglab)
+from mne.io import (read_raw_gdf, read_raw_eeglab, read_raw_brainvision)
 from mne import (find_events, events_from_annotations)
 
 sys.path.append('../..')
@@ -21,7 +21,7 @@ from modules.chunks import Port
 class Reader(Node):
     """Read a file and stream data in real-time and markes, can replay EEGLAB set files (.set) (the .ftd
     file must be in the same directory, Genearal Data Format (.gdf), Extensible Data Format (.xdf),
-    
+
     Attributes:
       - output (Port): Output port
       - marker_output (Port): output marker port
@@ -38,22 +38,29 @@ class Reader(Node):
 
         filename, self._file_extension = os.path.splitext(file)
         self._events = []
-        if self._file_extension in ['.gdf', '.set']:
+        if self._file_extension in ['.gdf', '.set', '.vhdr']:
             if self._file_extension == '.gdf':
                 self._raw = read_raw_gdf(file)
             elif self._file_extension == '.set':
                 self._raw = read_raw_eeglab(file)
+            elif self._file_extension == '.vhdr':
+                self._raw = read_raw_brainvision(file)
             self._sampling_frequency = self._raw.info['sfreq']
             self._channels = self._raw.info.ch_names
             try:
                 # to test
                 events = find_events(self._raw)
+                logging.debug('Get from find_events')
             except ValueError:
                 events = events_from_annotations(self._raw)
-
+                logging.debug('Get from events_from_annotations')
             nb_to_event = {events[1][key]: key for key in events[1]}
             for h in events[0]:
-                self._events.append((h[0] / 1000, float(nb_to_event[h[2]])))
+                try:
+                    value = float(nb_to_event[h[2]])
+                except ValueError:
+                    value = nb_to_event[h[2]]
+                self._events.append((h[0] / 1000, value))
             self._end_record = self._raw.times[-1]
             self._start_record = self._raw.times[0]
         elif self._file_extension == '.xdf':
@@ -112,7 +119,7 @@ class Reader(Node):
         if t > self._min_period + self._last_t and self._last_t < self._end_record:
             start_index = int(self._last_t * self._sampling_frequency)
             end_index = int(t * self._sampling_frequency)
-            if self._file_extension in ['.gdf', '.set']:
+            if self._file_extension in ['.gdf', '.set', '.vhdr']:
                 df = self._raw.to_data_frame(start=start_index, stop=end_index)
                 df['time'] = df['time'] / 1000
                 df = df.set_index('time')
