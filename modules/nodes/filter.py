@@ -67,3 +67,53 @@ class ButterFilter(Node):
             # update output port
             self.output.set(np.array(y).transpose(),
                             chunk.index, self.input.channels)
+
+
+class DownSample(Node):
+    """Downsample the signal after applying an anti-aliasing filter
+    Attributes:
+      - output (Port): output signal port of sampling frequency / factor
+    Args:
+      - input (Port): input signal port
+      - downsampling_factor (int): downsampling factor (recommanded under 13)
+
+    Example: DownSample(port45, 5)
+    """
+
+    def __init__(self, input_port, downsampling_factor):
+        Node.__init__(self, input_port)
+
+        assert self.input.data_type == 'signal'
+
+        self._downsampling_factor = int(downsampling_factor)
+
+        self.output.set_parameters(
+            data_type=self.input.data_type,
+            channels=self.input.channels,
+            sampling_frequency=self.input.sampling_frequency / self._downsampling_factor,
+            meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency
+        )
+
+        Node.log_instance(self, {
+            'downsampling factor': self._downsampling_factor
+        })
+        self.persistent = pd.DataFrame([], [], self.input.channels)
+
+    def update(self):
+        for chunk in self.input:
+            self.persistent = pd.concat([self.persistent, chunk])
+            nb_rows = len(self.persistent)
+            n = nb_rows // self._downsampling_factor * self._downsampling_factor
+            to_compute = self.persistent.iloc[:n, :]
+            to_keep = self.persistent.iloc[n:, :]
+            try:
+                df = signal.decimate(to_compute, self._downsampling_factor, axis=0)
+            except ValueError:
+                # to_compute does not have enough rows to be downsampled
+                pass
+            else:
+                index = [self.persistent.index[t * self._downsampling_factor] for t in range(len(df))]
+                df = pd.DataFrame(df, index, self.input.channels)
+                self.output.set(df, index, self.input.channels)
+                self.persistent = to_keep
