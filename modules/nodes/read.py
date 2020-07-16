@@ -4,6 +4,8 @@ import os
 import mne
 from time import time
 import logging
+import pyxdf
+import pandas as pd
 
 mne.set_log_level('WARNING')
 
@@ -17,7 +19,9 @@ from modules.chunks import Port
 
 
 class Reader(Node):
-    """Read a file and stream data in real-time
+    """Read a file and stream data in real-time and markes, can replay EEGLAB set files (.set) (the .ftd
+    file must be in the same directory, Genearal Data Format (.gdf), Extensible Data Format (.xdf),
+    
     Attributes:
       - output (Port): Output port
       - marker_output (Port): output marker port
@@ -32,11 +36,12 @@ class Reader(Node):
     def __init__(self, file, min_chunk_size=4):
         Node.__init__(self, None)
 
-        filename, file_extension = os.path.splitext(file)
-        if file_extension in ['.gdf', '.set']:
-            if file_extension == '.gdf':
+        filename, self._file_extension = os.path.splitext(file)
+        self._events = []
+        if self._file_extension in ['.gdf', '.set']:
+            if self._file_extension == '.gdf':
                 self._raw = read_raw_gdf(file)
-            elif file_extension == '.set':
+            elif self._file_extension == '.set':
                 self._raw = read_raw_eeglab(file)
             self._sampling_frequency = self._raw.info['sfreq']
             self._channels = self._raw.info.ch_names
@@ -45,12 +50,29 @@ class Reader(Node):
                 events = find_events(self._raw)
             except ValueError:
                 events = events_from_annotations(self._raw)
-            print(self._raw.info)
 
             nb_to_event = {events[1][key]: key for key in events[1]}
-            self._events = []
             for h in events[0]:
                 self._events.append((h[0] / 1000, float(nb_to_event[h[2]])))
+            self._end_record = self._raw.times[-1]
+            self._start_record = self._raw.times[0]
+        elif self._file_extension == '.xdf':
+            streams, header = pyxdf.load_xdf(file, verbose=False)
+            logging.info(f'Found {len(streams)} streams in xdf file')
+            for ix, stream in enumerate(streams):
+                sampling_frequency = float(stream['info']['nominal_srate'][0])
+                if sampling_frequency == 0:
+                    logging.debug(f'Get marker from stream {ix}')
+                    for timestamp, event in zip(stream['time_stamps'], stream['time_series']):
+                        self._events.append((timestamp, float(event)))
+                else:
+                    logging.debug(f'Get data from stream {ix}')
+                    self._sampling_frequency = sampling_frequency
+                    nb_chan = int(stream['info']['channel_count'][0])
+                    self._channels = [(stream['info']['desc'][0]['channels'][0]['channel'][i]['label'][0]) for i in range(nb_chan)]
+                    self._df = pd.DataFrame(stream['time_series'], stream['time_stamps'], self._channels)
+                    self._start_record = stream['time_stamps'][0]
+                    self._end_record = stream['time_stamps'][-1]
 
         self.marker_output = Port()
 
@@ -78,26 +100,31 @@ class Reader(Node):
         self._last_t = None
         self._min_period = min_chunk_size / self._sampling_frequency
         self._start_time = None
-        self._end_record = self._raw.times[-1]
         self._flag = True
 
     def update(self):
         t = time()
-        if not self._last_t:
-            self._last_t = t
         if not self._start_time:
             self._start_time = t
-        if t > self._min_period + self._last_t and self._last_t - self._start_time < self._end_record:
-            df = self._raw.to_data_frame(start=int((self._last_t - self._start_time) * self._sampling_frequency), stop=int((t - self._start_time) * self._sampling_frequency))
-            df['time'] = df['time'] / 1000
-            df = df.set_index('time')
-            df.columns = self._channels
+        t = t - self._start_time
+        if self._last_t == None:
+            self._last_t = t
+        if t > self._min_period + self._last_t and self._last_t < self._end_record:
+            start_index = int(self._last_t * self._sampling_frequency)
+            end_index = int(t * self._sampling_frequency)
+            if self._file_extension in ['.gdf', '.set']:
+                df = self._raw.to_data_frame(start=start_index, stop=end_index)
+                df['time'] = df['time'] / 1000
+                df = df.set_index('time')
+                df.columns = self._channels
+            elif self._file_extension == '.xdf':
+                df = self._df.iloc[start_index:end_index, :]
             self.output.set_from_df(df)
-            while self._events and t - self._start_time > self._events[0][0]:
+            while self._events and t + self._start_record > self._events[0][0]:
                 self.marker_output.set([self._events[0][1]], [self._events[0][0]])
                 self._events = self._events[1:]
             self._last_t = t
-        elif t - self._start_time > self._end_record:
+        elif t + self._start_record > self._end_record:
             if self._flag:
                 logging.info('End of record, press esc')
                 self._flag = False
