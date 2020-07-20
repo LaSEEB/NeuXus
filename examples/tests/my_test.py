@@ -26,9 +26,12 @@ plt2 = display.Plot(g.output, 5, [1])
 '''
 
 g = generate.Generator('simulation', 4, 250, min_chunk_size=1)
-t = epoching.TimeBasedEpoching(g.output, 1, 0.5)
-p = processing.PsdWelch(t.output)
+f = filter.ButterFilter(g.output, 1, 120)
+t = epoching.TimeBasedEpoching(f.output, 1, 2)
+p = processing.Fft(t.output)
 plo = display.PlotSpectrum(p.output)
+p1 = processing.PsdWelch(t.output)
+plo1 = display.PlotSpectrum(p1.output)
 
 
 #lsl_marker_reception = stimulator.Stimulator('../examples/basic/stim_config.xml')
