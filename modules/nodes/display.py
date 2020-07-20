@@ -31,6 +31,12 @@ Includes:
     CustomCanvas
     ProcessGraz
     Graz(Node)
+    ProcessSpectralPlotter
+    PlotSpectrum(Node)
+
+Plot and Plotspectrum from display.py may make the pipeline slower
+because of the use of matplotlib.pyplot. These Nodes may be used to debug
+or run on another computer not in the main pipeline
 """
 
 
@@ -315,6 +321,88 @@ class Graz(Node):
         for chunk in self.input:
             try:
                 self.plot_pipe.send(chunk.values[0])
+            except BrokenPipeError:
+                pass
+
+    def terminate(self):
+        try:
+            self.plot_pipe.send(None)
+        except BrokenPipeError:
+            pass
+
+
+class ProcessSpectralPlotter:
+    """Class used for plotting spectral signals, launched in a subprocess"""
+
+    def __init__(self, channels):
+        self._channels = channels
+
+    def terminate(self):
+        plt.close('all')
+
+    def __call__(self, pipe):
+
+        self.pipe = pipe
+        self.fig, self.ax = plt.subplots(len(self._channels), sharex='col')
+        if len(self._channels) == 1:
+            self.ax = [self.ax]
+
+        def animate(i):
+            while self.pipe.poll():
+                df = self.pipe.recv()
+                if df is None:
+                    self.terminate()
+                for index, chan in enumerate(self._channels):
+                    self.ax[index].clear()
+                    self.ax[index].plot(df.loc[[chan], :].transpose(), linewidth=.5)
+
+        ani = animation.FuncAnimation(self.fig, animate, interval=10)
+        plt.rc('ytick', labelsize=8)
+        plt.rc('xtick', labelsize=8)
+        plt.show()
+
+
+class PlotSpectrum(Node):
+    """Display a spectrum signal in a matplotlib window
+    Args:
+      - input_port (Port): input signal of type 'spectrum'
+      - channels (str or list): if 'all', display all channels, else diplay specified
+        channels according the way (index or name)
+      - way (str): 'name' or 'index', specified the way to choose channels
+
+    example: PlotSpectrum(port4)
+
+    """
+
+    def __init__(self, input_port, channels='all', way='index'):
+        Node.__init__(self, input_port, None)
+
+        assert self.input.data_type == 'spectrum'
+
+        if channels == 'all':
+            self._channels = self.input.channels
+        else:
+            if way == 'index':
+                self._channels = [self.input.channels[i - 1] for i in channels]
+            elif way == 'name':
+                self._channels = channels
+
+        # create the plot process
+        self.plot_pipe, plotter_pipe = mp.Pipe()
+        self.plotter = ProcessSpectralPlotter(self._channels)
+        self.plot_process = mp.Process(
+            target=self.plotter, args=(plotter_pipe,), daemon=True)
+        self.plot_process.start()
+
+        # Log new instance
+        Node.log_instance(self, {
+            'channels': self._channels
+        })
+
+    def update(self):
+        for chunk in self.input:
+            try:
+                self.plot_pipe.send(chunk.loc[self._channels, :])
             except BrokenPipeError:
                 pass
 
