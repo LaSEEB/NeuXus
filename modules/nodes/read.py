@@ -21,7 +21,7 @@ from modules.chunks import Port
 class Reader(Node):
     """Read a file and stream data in real-time and markes, can replay EEGLAB set files (.set) (the .ftd
     file must be in the same directory, Genearal Data Format (.gdf), Extensible Data Format (.xdf),
-
+    Brain vision format in .vhdr (.eeg and .vmrk files must be in the same directory)
     Attributes:
       - output (Port): Output port
       - marker_output (Port): output marker port

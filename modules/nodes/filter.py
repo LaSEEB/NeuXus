@@ -69,6 +69,58 @@ class ButterFilter(Node):
                             chunk.index, self.input.channels)
 
 
+class NotchFilter(Node):
+    """Band-stop filter with a narrow bandwidth (high quality factor). It rejects a narrow
+    frequency band and leaves the rest of the spectrum little changed.
+    Attributes:
+      - output: output port
+    Args:
+      - input: get DataFrame and meta from input_ port
+      - frequency_to_remove(float): frequency to remove from the signal in Hz
+      - quality_factor(float): Dimensionless parameter that characterizes notch
+        filter -3 dB bandwidth bw relative to its center frequency, Q = frequency_to_remove/bw
+
+    Example: NotchFilter(Port4, 10, 0.8)
+    """
+
+    def __init__(self, input_port, frequency_to_remove, quality_factor):
+        Node.__init__(self, input_port)
+
+        self.output.set_parameters(
+            data_type=self.input.data_type,
+            channels=self.input.channels,
+            sampling_frequency=self.input.sampling_frequency,
+            meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency
+        )
+
+        # calculate a and b, properties of the Butter filter
+        self._b, self._a = signal.iirnotch(
+            w0=frequency_to_remove,
+            Q=quality_factor,
+            fs=self.input.sampling_frequency)
+
+        # initial condition zi
+        len_to_conserve = max(len(self._a), len(self._b)) - 1
+        self._zi = np.zeros((len(self.input.channels), len_to_conserve))
+
+        Node.log_instance(self, {
+            'frequency to remove': frequency_to_remove,
+            'quality factor': quality_factor
+        })
+
+    def update(self):
+        for chunk in self.input:
+            # filter
+            y, zf = signal.lfilter(
+                self._b, self._a, chunk.transpose(), zi=self._zi)
+            # zf are the future initial conditions
+            self._zi = zf
+            # update output port
+            self.output.set(np.array(y).transpose(),
+                            chunk.index, self.input.channels)
+
+
 class DownSample(Node):
     """Downsample the signal after applying an anti-aliasing filter
     Attributes:

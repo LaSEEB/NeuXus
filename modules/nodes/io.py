@@ -32,6 +32,9 @@ class LslSend(Node):
     def __init__(self, input_port, name, type="signal", format="double64", uuid_=None):
         Node.__init__(self, input_port, False)
         self._name = name
+
+        assert self.input.data_type in ['epoch', 'signal', 'marker']
+
         self._type = type
         self._format = format
         self.outlet = None

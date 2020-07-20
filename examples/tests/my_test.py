@@ -8,15 +8,20 @@ from modules.nodes import (read, filter, io, select, epoching, epoch_function, s
 
 # rda_reception = io.RdaReceive(rdaport=51244, host="192.168.1.132")#, offset=0.125)
 
-'''
+
 xdf = '../../dataset/finger-tapping-graz-protocol.xdf'
 gdf = '../../dataset/ME-FG.gdf'
 set_ = '../../dataset/ME-FG.gdf_proc.set'
 vhdr = '../../dataset/ec-test0005.vhdr'
-r = read.Reader(vhdr)
-plot = display.Plot(r.output, 5, [1])
-gr = display.Graz(r.marker_output)
-'''
+vhdr2 = '../../dataset/HLuz_16062019_0004_emotions.vhdr'
+#r = read.Reader(gdf)
+r = generate.Generator('random', 32, 250, min_chunk_size=1)
+z = filter.ButterFilter(r.output, 5, 80)
+k = filter.NotchFilter(z.output, 20, 0.4)
+t = epoching.TimeBasedEpoching(k.output, 5, 2)
+f = processing.Fft(t.output)
+plot = display.PlotSpectrum(f.output, [1])
+
 
 '''
 g = generate.Generator('simulation', 32, 250, min_chunk_size=1)
@@ -24,7 +29,7 @@ ds = filter.DownSample(g.output, 5)
 plt = display.Plot(ds.output, 5, [1])
 plt2 = display.Plot(g.output, 5, [1])
 '''
-
+'''
 g = generate.Generator('simulation', 4, 250, min_chunk_size=1)
 f = filter.ButterFilter(g.output, 1, 120)
 t = epoching.TimeBasedEpoching(f.output, 1, 2)
@@ -32,7 +37,7 @@ p = processing.Fft(t.output)
 plo = display.PlotSpectrum(p.output)
 p1 = processing.PsdWelch(t.output)
 plo1 = display.PlotSpectrum(p1.output)
-
+'''
 
 #lsl_marker_reception = stimulator.Stimulator('../examples/basic/stim_config.xml')
 #d = io.LslSend(lsl_marker_reception.output, 'my stimulus', 'Markers')
