@@ -1,32 +1,55 @@
-# laseeb-bci
-LaSEEB BCI pipeline
+# NeuXus
+Build flexible pipeline for real-time processing
 
 
 ## Installation
 
-From source:
+### Basic use
+
+To Do uploading on PyPi
+```
+pip install neuxus
+```
+
+## Run
+
+### Run basic pipeline from NeuXus
+
+```
+neuxus basics/generate_send.py -e
+```
+
+### Run your pipeline from NeuXus
+
+```
+neuxus path_to_my_pipeline.py
+```
+
+## Customize your own nodes
+
+see template
+TODO
+
+## For developers
+
+Clone from source:
 
 ```
 git clone https://github.com/athanoid/laseeb-bci.git
 ```
 
+Install dev-requirements
+ToDo
 
-## Requirements
-
+Create the tar.gz file and install it on your computer:
 ```
-python -m pip install -r requirements
-```
-
-## Examples
-
-```
-python modules/stimulus/stimulator.py config_file.xml
-python modules/visualization/graz/graz.py
+setup.py sdist
+pip install nexus-xx.xx.xx.tar.gz
 ```
 
-## Tests
+### Tests
 
-Launch test with:
+Launch tests with:
 ```
 python -m unittest discover
 ```
