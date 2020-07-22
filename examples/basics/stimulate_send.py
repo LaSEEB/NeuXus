@@ -1,9 +1,4 @@
-import sys
-
-sys.path.append('../..')
-
-from modules.nodes import (filter, io, select, epoching,
-                           epoch_function, store, generate, feature, function, stimulator)
+from neuxus.nodes import *
 
 stim_cfg = '../examples/basic/stim_config.xml'
 

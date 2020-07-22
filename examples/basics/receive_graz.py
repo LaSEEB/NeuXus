@@ -1,9 +1,4 @@
-import sys
-
-sys.path.append('../..')
-
-from modules.nodes import (filter, io, select, epoching,
-                           epoch_function, store, generate, feature, function, display)
+from neuxus.nodes import *
 
 lsl_input_marker = io.LslReceive(
     prop='type',

@@ -1,9 +1,4 @@
-import sys
-
-sys.path.append('../..')
-
-from modules.nodes import (filter, io, select, epoching,
-                           epoch_function, store, generate, feature, function)
+from neuxus.nodes import *
 
 generated_data = generate.Generator(
     generator='simulation',
