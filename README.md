@@ -35,7 +35,7 @@ TODO
 Clone from source:
 
 ```
-git clone https://github.com/athanoid/laseeb-bci.git
+git clone https://github.com/LaSEEB/NeuXus.git
 ```
 
 Install dev-requirements
