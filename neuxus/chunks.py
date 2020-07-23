@@ -1,11 +1,7 @@
-import sys
-
 import pandas as pd
 import logging
 
-sys.path.append('..')
-
-from modules.keepref import KeepRefs
+from neuxus.keepref import KeepRefs
 
 
 class Port(KeepRefs):

@@ -1,18 +1,13 @@
-import os
 import sys
 
-from time import time
-import psutil
 import logging
 import threading
 import queue
 import numpy as np
 from pynput import keyboard
 
-sys.path.append('..')
-
-from modules.chunks import Port
-from modules.node import Node
+from neuxus.chunks import Port
+from neuxus.node import Node
 
 
 q = queue.Queue()
@@ -34,9 +29,6 @@ def lis():
 
 def run(pipeline):
     """Function to run pipeline"""
-
-    pid = os.getpid()
-    py = psutil.Process(pid)
 
     th = threading.Thread(target=lis)
     th.start()
@@ -61,16 +53,12 @@ def run(pipeline):
         for p1 in p:
             print(p1.cpu_percent(interval=.001))
             print(p1.memory_percent())'''
-        calc_starttime = time()
 
         for port in Port.get_instances():
             port.clear()
         for nods in Node.get_instances():
             nods.update()
             nods.update_to_log()
-
-        calc_endtime = time()
-        calc_time = calc_endtime - calc_starttime
         try:
             if q.get_nowait() == 'end':
                 flag = False

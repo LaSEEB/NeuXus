@@ -1,9 +1,6 @@
-import sys
-
-sys.path.append('..')
 import numpy as np
 
-from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate, feature, function, classify, display)
+from neuxus.nodes import *
 
 # data aqcuisition from LSL stream
 lsl_signal = io.LslReceive('name', 'LiveAmpSN-054207-0168', data_type='signal', sync='network')

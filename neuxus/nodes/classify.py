@@ -1,10 +1,6 @@
-import sys
-
 import joblib
 
-sys.path.append('../..')
-
-from modules.node import Node
+from neuxus.node import Node
 
 
 class Classify(Node):

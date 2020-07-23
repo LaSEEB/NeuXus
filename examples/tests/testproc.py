@@ -1,9 +1,6 @@
-import sys
-
-sys.path.append('..')
 import numpy as np
 
-from modules.nodes import (processing, filter, io, select, epoching, epoch_function, store, generate, feature, function, display, stimulator)
+from neuxus.nodes import *
 
 # data aqcuisition from LSL stream
 lsl_signal = generate.Generator('simulation', 32, 250)

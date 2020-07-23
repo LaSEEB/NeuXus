@@ -1,5 +1,3 @@
-import sys
-
 from time import time
 import random as rd
 
@@ -7,9 +5,7 @@ from xml.dom import minidom
 from xml.parsers.expat import ExpatError
 import numpy as np
 
-sys.path.append('../..')
-
-from modules.node import Node
+from neuxus.node import Node
 
 """
 Author: S.LEGEAY, intern at LaSEEB

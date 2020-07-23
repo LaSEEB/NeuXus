@@ -1,8 +1,4 @@
-import sys
-
-sys.path.append('../..')
-
-from modules.node import Node
+from neuxus.node import Node
 
 
 class ApplyFunction(Node):

@@ -1,10 +1,6 @@
-import sys
-
 import numpy as np
 
-sys.path.append('../..')
-
-from modules.nodes import (read, filter, io, select, epoching, epoch_function, store, generate, feature, function, display, stimulator, processing)
+from neuxus.nodes import *
 
 # rda_reception = io.RdaReceive(rdaport=51244, host="192.168.1.132")#, offset=0.125)
 

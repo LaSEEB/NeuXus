@@ -1,12 +1,8 @@
-import sys
-
 import random as rd
 from time import time
 import numpy as np
 
-sys.path.append('../..')
-
-from modules.node import Node
+from neuxus.node import Node
 
 
 class Generator(Node):

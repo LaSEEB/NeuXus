@@ -1,4 +1,3 @@
-import sys
 import os
 
 import mne
@@ -12,10 +11,8 @@ mne.set_log_level('WARNING')
 from mne.io import (read_raw_gdf, read_raw_eeglab, read_raw_brainvision)
 from mne import (find_events, events_from_annotations)
 
-sys.path.append('../..')
-
-from modules.node import Node
-from modules.chunks import Port
+from neuxus.node import Node
+from neuxus.chunks import Port
 
 
 class Reader(Node):

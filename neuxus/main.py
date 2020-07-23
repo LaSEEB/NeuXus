@@ -1,21 +1,18 @@
-import sys
+import os
 
 import argparse
 import logging
 from datetime import datetime
 
-sys.path.append('..')
-
-from modules.pipeline import run
+from neuxus.pipeline import run
 
 
-if __name__ == '__main__':
-
+def main():
     parser = argparse.ArgumentParser(
-        description="# LaSEEB BCI main script")
+        description="# Sygnal main script")
     parser.add_argument(
         "pipeline",
-        help="Path to the pipeline file")
+        help="Path to the pipeline script file")
     parser.add_argument(
         "-f",
         "--file",
@@ -27,6 +24,11 @@ if __name__ == '__main__':
         choices=['DEBUG', 'INFO'],
         help="Specify the output format",
         default='INFO')
+    parser.add_argument(
+        "-e",
+        "--example",
+        action="store_true",
+        help="To run an example from sygnal")
     args = parser.parse_args()
 
     numeric_level = getattr(logging, args.loglevel.upper(), None)
@@ -43,5 +45,14 @@ if __name__ == '__main__':
         logging.basicConfig(
             format='[%(levelname)s] %(message)s',
             level=numeric_level)
+    if args.example:
+        file = os.path.split(os.path.split(__file__)[0])[0] + '/examples/' + args.pipeline
+        logging.info(f'Run {file}')
+    else:
+        file = args.pipeline
     # run the pipeline
-    run(args.pipeline)
+    run(file)
+
+
+if __name__ == '__main__':
+    main()

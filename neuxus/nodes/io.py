@@ -1,19 +1,14 @@
-import sys
-
 import numpy as np
 from struct import unpack
 from socket import (AF_INET, SOCK_STREAM, SOCK_DGRAM, socket)
 import logging
 import uuid
-import pandas as pd
-from time import (time, sleep)
+from time import time
 from pylsl import (StreamInfo, StreamOutlet,
                    StreamInlet, resolve_byprop, pylsl)
 
-sys.path.append('../..')
-
-from modules.node import Node
-from modules.chunks import Port
+from neuxus.node import Node
+from neuxus.chunks import Port
 
 
 class LslSend(Node):

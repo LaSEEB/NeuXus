@@ -1,11 +1,8 @@
-import sys
-
-sys.path.append('..')
 import numpy as np
-
-from modules.nodes import (filter, io, select, epoching, epoch_function, store, generate, feature, function, display, stimulator)
-
 import datetime
+
+from neuxus.nodes import *
+
 date = datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
 print (date)
 features_file = '../examples/motor-imagery-simple/Epochs_'+date

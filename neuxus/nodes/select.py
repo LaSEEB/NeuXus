@@ -1,4 +1,3 @@
-import sys
 import os
 
 import pandas as pd
@@ -6,10 +5,7 @@ import logging
 import yaml
 from xml.dom import minidom
 
-sys.path.append('../..')
-
-from modules.node import Node
-from modules.registry import *
+from neuxus.node import Node
 
 
 class ChannelSelector(Node):

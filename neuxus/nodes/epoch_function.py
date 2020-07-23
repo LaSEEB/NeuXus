@@ -1,12 +1,8 @@
-import sys
-
 import pandas as pd
 import numpy as np
 from scipy import signal
 
-sys.path.append('../..')
-
-from modules.node import Node
+from neuxus.node import Node
 
 
 class UnivariateStat(Node):

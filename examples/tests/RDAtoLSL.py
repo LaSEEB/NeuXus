@@ -1,10 +1,4 @@
-import sys
-
-import numpy as np
-
-sys.path.append('..')
-
-from modules.nodes import *
+from neuxus.nodes import *
 
 
 # receive RDA from Recorder or Recview

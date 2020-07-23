@@ -1,13 +1,9 @@
-import sys
-
 from abc import ABC, abstractmethod
 import logging
 
-sys.path.append('..')
-
-from modules.chunks import Port
-from modules.keepref import KeepRefsFromParent
-from modules.registry import *
+from neuxus.chunks import Port
+from neuxus.keepref import KeepRefsFromParent
+from neuxus.registry import *
 
 
 class Node(KeepRefsFromParent, ABC):

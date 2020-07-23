@@ -1,12 +1,8 @@
-import sys
-
 from scipy import signal
 import numpy as np
+import pandas as pd
 
-sys.path.append('../..')
-
-from modules.node import Node
-from modules.registry import *
+from neuxus.node import Node
 
 
 class ButterFilter(Node):

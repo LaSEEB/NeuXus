@@ -1,5 +1,3 @@
-import sys
-
 import logging
 from tkinter import *
 import pandas as pd
@@ -12,9 +10,7 @@ import multiprocessing as mp
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-sys.path.append('../..')
-
-from modules.node import Node
+from neuxus.node import Node
 
 style.use('fivethirtyeight')
 

@@ -1,8 +1,4 @@
-import sys
-
-sys.path.append('..')
-
-from modules.nodes import *
+from neuxus.nodes import *
 
 lsl_reception = io.LslReceive('type', 'signal')  # or (port0, 'type', 'signal')
 butter_filter = filter.ButterFilter(lsl_reception.output, 8, 12)
