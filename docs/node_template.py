@@ -57,7 +57,7 @@ class MyNewNode(Node):
             epoching_frequency=self.input.epoching_frequency
         )
 
-        # initialize parameters:
+        # initialize parameters that will be useful for calculation:
         # ex:
         self._arg1 = arg1 / 10  # _arg means a protected arg
         self._channels = self.input.channels
@@ -77,7 +77,7 @@ class MyNewNode(Node):
             # 'epoch': a DataFrame containig one epoch
             # 'spectrum': a special DataFrame containing the signal
 
-            # to see more particularly what a chunk looks like
+            # to see more particularly what a chunk looks like add:
             print(chunk)
 
             # compute all necessary calculation
