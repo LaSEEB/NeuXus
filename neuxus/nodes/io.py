@@ -22,7 +22,7 @@ class LslSend(Node):
     to add    source (string, None): The unique identifier for the stream. If ``None``, it will be auto-generated.
     """
 
-    _dtypes = {"double64": np.number, "string": np.object, 'float32': np.number}
+    _dtypes = {"double64": np.number, "string": np.object, 'float32': np.number, 'int32': np.number}
 
     def __init__(self, input_port, name, type="signal", format="double64", uuid_=None):
         Node.__init__(self, input_port, False)

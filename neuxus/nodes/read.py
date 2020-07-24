@@ -61,7 +61,7 @@ class Reader(Node):
             self._end_record = self._raw.times[-1]
             self._start_record = self._raw.times[0]
         elif self._file_extension == '.xdf':
-            streams, header = pyxdf.load_xdf(file, verbose=False)
+            streams, header = pyxdf.load_xdf(file, synchronize_clocks=False, verbose=False)
             logging.info(f'Found {len(streams)} streams in xdf file')
             for ix, stream in enumerate(streams):
                 sampling_frequency = float(stream['info']['nominal_srate'][0])

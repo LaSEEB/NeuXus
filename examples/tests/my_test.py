@@ -1,10 +1,13 @@
+import sys
+
 import numpy as np
 
 from neuxus.nodes import *
 
+sys.path.append('.')
 # rda_reception = io.RdaReceive(rdaport=51244, host="192.168.1.132")#, offset=0.125)
 
-
+'''
 xdf = '../../dataset/finger-tapping-graz-protocol.xdf'
 gdf = '../../dataset/ME-FG.gdf'
 set_ = '../../dataset/ME-FG.gdf_proc.set'
@@ -17,7 +20,7 @@ k = filter.NotchFilter(z.output, 20, 0.4)
 t = epoching.TimeBasedEpoching(k.output, 5, 2)
 f = processing.Fft(t.output)
 plot = display.PlotSpectrum(f.output, [1])
-
+'''
 
 '''
 g = generate.Generator('simulation', 32, 250, min_chunk_size=1)
@@ -34,9 +37,22 @@ plo = display.PlotSpectrum(p.output)
 p1 = processing.PsdWelch(t.output)
 plo1 = display.PlotSpectrum(p1.output)
 '''
+'''
+marker_stream = stimulator.Stimulator('examples/basics/stimulation_config_1.xml')
+signal_stream = generate.Generator('simulation', 32, 250)
 
-#lsl_marker_reception = stimulator.Stimulator('../examples/basic/stim_config.xml')
+signal_stream2 = generate.Generator('simulation', 32, 250)
+marker_send = io.LslSend(marker_stream.output, type='Markers', name='merde', format='int32')
+signal_send = io.LslSend(signal_stream.output, name='signal')
+signal_send2 = io.LslSend(signal_stream2.output, name='signal2')
 #d = io.LslSend(lsl_marker_reception.output, 'my stimulus', 'Markers')
+
+'''
+xdf = 'dataset/testxdf.xdf'
+r = read.Reader(xdf)
+l = io.LslSend(r.marker_output, name='myxdfmarkers', type='Markers')
+l2 = io.LslSend(r.output, name='data')
+
 #graz_vis = display.Graz(lsl_marker_reception.output)
 #my_func = select.SpatialFilter(lsl_reception.output, '../examples/csp_ft.cfg')
 '''

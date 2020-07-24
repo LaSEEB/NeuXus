@@ -43,10 +43,8 @@ class Port(KeepRefs):
         else:
             self._data.append(pd.DataFrame(rows, index=timestamps))
 
-    def set_from_df(self, df, name=None):
+    def set_from_df(self, df):
         """Set from a DataFrame object"""
-        if name:
-            df.meta = str(name)
         self._data.append(df)
 
     def log_parameters(self):
