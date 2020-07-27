@@ -10,7 +10,7 @@ setuptools.setup(
     name="neuxus",
     version="0.0.1",
     author="S.Legeay, A.Vourvopoulos",
-    author_email="to do",
+    author_email="legeay.simon.sup@gmail.com",
     description="A flexible software to build real-time pipeline for EEG processing",
     long_description=long_description,
     long_description_content_type="text/markdown",

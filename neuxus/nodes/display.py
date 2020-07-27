@@ -1,12 +1,12 @@
 import logging
 from tkinter import *
 import pandas as pd
+import multiprocessing as mp
 
 mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
 
 from matplotlib import style
-import multiprocessing as mp
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
@@ -23,7 +23,7 @@ Gathers all nodes for signal display and Graz
 Includes:
     ProcessPlotter
     Plot(Node)
-    Markers
+    MARKERS(define all markers)
     CustomCanvas
     ProcessGraz
     Graz(Node)
@@ -266,6 +266,9 @@ class ProcessGraz():
             elif sample[0] == MARKERS['hide_cross']:
                 self.myCanvas.hide_cross()
             elif sample[0] == MARKERS['exit_']:
+                self.terminate()
+                return
+            elif not sample[0]:
                 self.terminate()
                 return
         self.root.after(10, self.call_back)

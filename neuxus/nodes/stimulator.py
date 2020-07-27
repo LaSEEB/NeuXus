@@ -1,9 +1,11 @@
 from time import time
 import random as rd
-
+from tkinter import *
 from xml.dom import minidom
 from xml.parsers.expat import ExpatError
 import numpy as np
+import multiprocessing as mp
+from tkinter.ttk import Progressbar
 
 from neuxus.node import Node
 
@@ -277,6 +279,86 @@ class MarkerClass(Marker):
         return class_
 
 
+class CustomCanvas(Canvas):
+    """Custom Canvas fitting with graz visualization with function to update the content
+    according the windows size, and plot functions"""
+
+    def __init__(self, parent, **kwargs):
+        self.progress = Progressbar(parent, length=425, orient=HORIZONTAL, mode='determinate')
+        #self.bind("<Configure>", self.on_resize)
+        self.parent = parent
+        self.progress.pack(side=TOP, expand=NO)
+
+        Canvas.__init__(self, parent, **kwargs)
+        self.pack(fill=BOTH, expand=0)
+        self._last = ['', '', '', '', '']
+        self._i = 0
+
+        #self.height = self.winfo_reqheight()
+        #self.width = self.winfo_reqwidth()
+
+    def update(self, marker, end):
+        """"""
+        self.delete('a')
+        self._last = self._last[1:] + [marker]
+        self.progress['value'] = self._i * 100 / (end - 1)
+        self._i += 1
+        self.parent.update_idletasks()
+        self.create_text(20, 20, anchor=W, tags='a', text=self._last[0], font=('Helvetica', '12'))
+        self.create_text(20, 40, anchor=W, tags='a', text=self._last[1], font=('Helvetica', '12'))
+        self.create_text(20, 60, anchor=W, tags='a', text=self._last[2], font=('Helvetica', '12'))
+        self.create_text(20, 80, anchor=W, tags='a', text=self._last[3], font=('Helvetica', '12'))
+        self.create_text(20, 104, anchor=W, tags='a', text=self._last[4], font=('Helvetica', '18'))
+
+    def on_resize(self, event):
+        # determine the ratio of old width/height to new width/height
+        wscale = float(event.width) / self.width
+        hscale = float(event.height) / self.height
+        self.width = event.width
+        self.height = event.height
+        # resize the canvas
+        self.config(width=self.width, height=self.height)
+        # rescale all the objects tagged with the "all" tag
+        self.scale("all", 0, 0, wscale, hscale)
+
+
+class ProcessStim():
+    """Create a new window containing the Graz visualization
+    Launched in a subprocess"""
+
+    def __init__(self, end):
+        self._max = end
+
+    def terminate(self):
+        self.root.destroy()
+
+    def call_back(self):
+        if self.pipe.poll():
+            sample = self.pipe.recv()
+            if sample:
+                self.myCanvas.update(sample, self._max)
+        self.root.after(10, self.call_back)
+
+    def __call__(self, pipe):
+        self.pipe = pipe
+        # initialise a window.
+        self.root = Tk()
+        self.root.config()
+        self.root.title('Stimulator')
+        self.root.geometry("500x150")
+
+        # create a Frame
+        myframe = Frame(self.root)
+        myframe.pack(fill=BOTH, expand=NO)
+
+        # add a canvas
+        self.myCanvas = CustomCanvas(myframe, width=425, height=200,
+                                     highlightthickness=0)
+        self.myCanvas.pack(fill=BOTH, expand=NO)
+        self.root.after(0, self.call_back)
+        self.root.mainloop()
+
+
 class Stimulator(Node):
     """Generate a marker stream from a config file
     Attributes:
@@ -304,6 +386,13 @@ class Stimulator(Node):
             sampling_frequency=0,
             meta='')
 
+        # create the plot process
+        self.plot_pipe, plotter_pipe = mp.Pipe()
+        self.plotter = ProcessStim(len(self._scenario))
+        self.plot_process = mp.Process(
+            target=self.plotter, args=(plotter_pipe,), daemon=True)
+        self.plot_process.start()
+
         Node.log_instance(self, {
             'file': file,
             'name': config.name,
@@ -323,4 +412,14 @@ class Stimulator(Node):
         t = time()
         while self._scenario and t >= self._scenario[0][1]:
             self.output.set(self._scenario[0][0], [self._scenario[0][1]], ['marker'])
+            try:
+                self.plot_pipe.send(self._scenario[0][0])
+            except BrokenPipeError:
+                pass
             self._scenario = self._scenario[1:]
+
+    def terminate(self):
+        try:
+            self.plot_pipe.send(None,)
+        except BrokenPipeError:
+            pass
