@@ -22,7 +22,7 @@ def main():
         "-l",
         "--loglevel",
         choices=['DEBUG', 'INFO'],
-        help="Specify the output format",
+        help="Specify the log level, default is INFO",
         default='INFO')
     parser.add_argument(
         "-e",

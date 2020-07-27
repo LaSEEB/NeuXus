@@ -14,10 +14,10 @@ setuptools.setup(
     description="A flexible software to build real-time pipeline for EEG processing",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="to do",
+    url="https://github.com/LaSEEB/NeuXus",
     classifiers=[
         "Programming Language :: Python :: 3",
-        # "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: GNU License",
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.7',
