@@ -9,22 +9,30 @@ class Classify(Node):
       - output (Port): signal output port
     Args:
       - model_file (str): path to the model file
+      - output(str): 'class' or 'probability', specify the output
 
     Example: Classify(Port4, 'LDA.sav')
 
     """
 
-    def __init__(self, input_port, model_file):
+    def __init__(self, input_port, model_file, output):
         Node.__init__(self, input_port)
         # load model from save
         self._loaded_model = joblib.load(model_file)
 
+        assert output in ['class', 'probability']
+        self._output = output
+
         # verify the input signal type
+        if self._output == 'class':
+            self._columns = ['class']
+        elif self._output == 'probability':
+            self._columns = self.input.channels
 
         # set the ouput Port parameters
         self.output.set_parameters(
             data_type='signal',
-            channels=['class'],
+            channels=self._columns,
             sampling_frequency=self.input.sampling_frequency,
             meta=self.input.meta
         )
@@ -36,7 +44,10 @@ class Classify(Node):
 
     def update(self):
         for vector in self.input:
-            self.output.set(self._loaded_model.predict(vector.values.tolist()), columns=['class'], timestamps=vector.index)
+            if self._output == 'class':
+                self.output.set(self._loaded_model.predict(vector.values.tolist()), columns=self._columns, timestamps=vector.index)
+            elif self._output == 'probability':
+                self.output.set(self._loaded_model.predict_proba(vector.values.tolist()), columns=self._columns, timestamps=vector.index)
 
 
 """class Train(Node):

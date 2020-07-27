@@ -3,7 +3,8 @@ import numpy as np
 from neuxus.nodes import *
 
 # data aqcuisition from LSL stream
-lsl_signal = io.LslReceive('name', 'LiveAmpSN-054207-0168', data_type='signal', sync='network')
+#lsl_signal = io.LslReceive('name', 'LiveAmpSN-054207-0168', data_type='signal', sync='network')
+lsl_signal = generate.Generator('simulation', 32, 250)
 #lsl_markers = io.LslReceive('type', 'Markers', data_type='marker')
 
 #channel selection
@@ -29,5 +30,5 @@ log_power = function.ApplyFunction(average_epoch.output, lambda x: np.log1p(x)) 
 
 
 features = feature.FeatureAggregator(log_power.output) #create feature vector
-mi_class = classify.Classify(features.output, '../examples/motor-imagery-simple/lda_model.sav')#load model and predict class labels
+mi_class = classify.Classify(features.output, 'examples/motor-imagery-simple/lda_model.sav', 'probability')#load model and predict class labels
 disp1 = display.Plot(mi_class.output)
