@@ -8,7 +8,7 @@ with open("requirements.txt") as fr:
 
 setuptools.setup(
     name="neuxus",
-    version="0.0.1",
+    version="0.0.2",
     author="S.Legeay, A.Vourvopoulos",
     author_email="legeay.simon.sup@gmail.com",
     description="A flexible software to build real-time pipeline for EEG processing",
