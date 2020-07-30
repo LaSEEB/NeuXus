@@ -47,12 +47,9 @@ def main():
             level=numeric_level)
     if args.example:
         file = os.path.split(os.path.split(__file__)[0])[0] + '/examples/' + args.pipeline
-        logging.info(f'Run {file}')
     else:
         file = args.pipeline
+
     # run the pipeline
+    logging.info(f'Run {file}')
     run(file)
-
-
-if __name__ == '__main__':
-    main()

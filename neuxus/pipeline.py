@@ -1,4 +1,5 @@
 import sys
+import os
 
 import logging
 import threading
@@ -29,6 +30,8 @@ def lis():
 
 def run(pipeline):
     """Function to run pipeline"""
+    dir_path = os.path.dirname(os.path.realpath(pipeline))
+    sys.path.append(dir_path)
 
     th = threading.Thread(target=lis)
     th.start()

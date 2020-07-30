@@ -4,11 +4,9 @@ Detailed template for creating basic NeuXus scripts
 Refer to the examples for more complex pipelines and possibilities.
 
 author: Simon Legeay, LaSEEB/CentraleSupélec
-mail: simon.legeay.sup@gmail.com
+mail: legeay.simon.sup@gmail.com
 
 """
-
-import sys
 
 # import usefull library
 import numpy as np
@@ -18,9 +16,7 @@ import datetime
 # refer to the API to see all available nodes
 from neuxus.nodes import *
 
-# add the path to your customized node
-sys.path.append('path_to_the_new_module_file')
-# import your customized nodes
+# import your customized nodes from a file located in the same directory as your pipeline script
 from my_custom_node_file import MyCustomNode
 
 # this script is exucuted at the very beginning, you can initialze some data, parameters
