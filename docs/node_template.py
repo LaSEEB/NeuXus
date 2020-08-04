@@ -3,16 +3,16 @@
 Detailed template for creating basic custom nodes
 For special and more complex nodes, please refer to the existing nodes
 
-author: Simon Legeay, LaSEEB/CentraleSupélec
-mail: simon.legeay.sup@gmail.com
+author: ...
+mail: ...
 
 """
 
 
 # import all usefull library
 # example:
-# from scipy import signal
-# import numpy as np
+from scipy import signal
+import numpy as np
 
 from neuxus.node import Node
 
@@ -69,6 +69,7 @@ class MyNewNode(Node):
         })
 
     def update(self):
+        '''Update the output'''
         # iter over the input, you might receive several chunks per each global NeuXus iteration
         for chunk in self.input:
             # chunk type depends on self.input.data_type:
@@ -77,7 +78,7 @@ class MyNewNode(Node):
             # 'epoch': a DataFrame containig one epoch
             # 'spectrum': a special DataFrame containing the signal
 
-            # to see more particularly what a chunk looks like add:
+            # to see more particularly what a chunk looks like add (for dev:
             print(chunk)
 
             # compute all necessary calculation

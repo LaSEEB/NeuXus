@@ -3,8 +3,8 @@
 Detailed template for creating basic NeuXus scripts
 Refer to the examples for more complex pipelines and possibilities.
 
-author: Simon Legeay, LaSEEB/CentraleSupélec
-mail: legeay.simon.sup@gmail.com
+author: ...
+mail: ...
 
 """
 
@@ -19,8 +19,8 @@ from neuxus.nodes import *
 # import your customized nodes from a file located in the same directory as your pipeline script
 from my_custom_node_file import MyCustomNode
 
-# this script is exucuted at the very beginning, you can initialze some data, parameters
-# and create all nodes of your pipeline
+# this script is executed at the very beginning, you can initialze some data, parameters
+# and create all Nodes you need for your pipeline
 
 # for example
 date = datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
@@ -29,7 +29,7 @@ features_file = 'my_path' + date
 
 # stimulation and visualization
 lsl_markers = stimulator.Stimulator(
-    file='../utils/stimulus/config_ov.xml'
+    file=dir_path + 'config_ov.xml'  # dir_path is the path to the directory containing the current script
 )
 
 # data aqcuisition from LSL stream
@@ -38,7 +38,7 @@ lsl_signal = generate.Generator(
     nb_channels=32,
     sampling_frequency=250
 )
-# or
+# or from simulation
 lsl_signal = io.LslReceive(
     prop='name',
     value='LiveAmpSN-054207-0168',
@@ -79,4 +79,9 @@ average_epoch = epoch_function.UnivariateStat(
 tocsvL = store.ToCsv(
     input_port=average_epoch.output,
     file=features_file
+)
+
+# my custom node
+my_node = MyCustomNode(
+    input_port=average_epoch.output
 )
