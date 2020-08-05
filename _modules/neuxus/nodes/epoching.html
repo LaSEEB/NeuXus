@@ -1,0 +1,441 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>neuxus.nodes.epoching &mdash; NeuXus 0.0.3 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+        <link rel="search" title="Search" href="../../../search.html"/>
+    <link rel="top" title="NeuXus 0.0.3 documentation" href="../../../index.html"/>
+        <link rel="up" title="Module code" href="../../index.html"/> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> NeuXus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tuto1.html">Create a pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tuto2.html">Create your own node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cite_us.html">Cite us</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">NeuXus</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>neuxus.nodes.epoching</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for neuxus.nodes.epoching</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">from</span> <span class="nn">neuxus.node</span> <span class="kn">import</span> <span class="n">Node</span>
+
+
+<div class="viewcode-block" id="TimeBasedEpoching"><a class="viewcode-back" href="../../../epoching.html#neuxus.nodes.epoching.TimeBasedEpoching">[docs]</a><span class="k">class</span> <span class="nc">TimeBasedEpoching</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generates signal &#39;slices&#39; or &#39;blocks&#39; having a specified duration and interval</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - output: output Port used to share data to other nodes</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - input_port (Port): Input signal (type &#39;signal&#39; or &#39;epoch&#39;)</span>
+<span class="sd">      - duration (float): Length of epoched signal</span>
+<span class="sd">      - interval (float): Time interval between two consecutive epochs for signal</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">interval</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">duration</span> <span class="o">=</span> <span class="n">duration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interval</span> <span class="o">=</span> <span class="n">interval</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;epoch&#39;</span><span class="p">,</span>
+            <span class="n">channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+            <span class="n">epoching_frequency</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="n">interval</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([],</span> <span class="p">[],</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span>
+            <span class="s1">&#39;interval&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">interval</span>
+        <span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">update_timing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_time</span><span class="p">,</span> <span class="n">max_time</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span> <span class="o">==</span> <span class="s1">&#39;epoch&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span> <span class="o">=</span> <span class="n">min_time</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span> <span class="o">==</span> <span class="s1">&#39;epoch&#39;</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span> <span class="o">&lt;</span> <span class="n">max_time</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">markers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">trigger</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interval</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span> <span class="o">==</span> <span class="s1">&#39;signal&#39;</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span> <span class="o">&lt;</span> <span class="n">max_time</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">markers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">trigger</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interval</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># update persistence</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="p">,</span> <span class="n">chunk</span><span class="p">])</span>
+
+            <span class="c1"># update markers received</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_timing</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">markers</span><span class="o">.</span><span class="n">copy</span><span class="p">():</span>
+                <span class="n">start_time</span><span class="p">,</span> <span class="n">end_time</span> <span class="o">=</span> <span class="n">marker</span>
+                <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">end_time</span><span class="p">:</span>
+                    <span class="c1"># get epoch</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span> <span class="o">&gt;=</span> <span class="n">start_time</span><span class="p">]</span>
+                    <span class="n">epoch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">end_time</span><span class="p">]</span>
+                    <span class="c1"># update the output</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_from_df</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">markers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">marker</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span> <span class="o">==</span> <span class="s1">&#39;epoch&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([],</span> <span class="p">[],</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MarkerBasedSeparation"><a class="viewcode-back" href="../../../epoching.html#neuxus.nodes.epoching.MarkerBasedSeparation">[docs]</a><span class="k">class</span> <span class="nc">MarkerBasedSeparation</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Cut a continuous signal in epoch, separation of epoch are set each time a Marker come</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - output (Port): epoched output port</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - input_port (Port): input signal</span>
+<span class="sd">      - marker_input_port (Port): input markers</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="n">marker_input_port</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">marker_input</span> <span class="o">=</span> <span class="n">marker_input_port</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;epoch&#39;</span><span class="p">,</span>
+            <span class="n">channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+            <span class="n">epoching_frequency</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># persitent is data of a non-complete epoch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([],</span> <span class="p">[],</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markers_received</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([],</span> <span class="p">[],</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+        <span class="c1"># current_name is the name to add for current epoch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_name</span> <span class="o">=</span> <span class="s1">&#39;first epoch&#39;</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;marker port&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_input</span><span class="o">.</span><span class="n">id</span><span class="p">})</span>
+
+<div class="viewcode-block" id="MarkerBasedSeparation.get_end_time"><a class="viewcode-back" href="../../../epoching.html#neuxus.nodes.epoching.MarkerBasedSeparation.get_end_time">[docs]</a>    <span class="k">def</span> <span class="nf">get_end_time</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Test if a new marker arrived and return its timestamp as end of last epoch</span>
+<span class="sd">        else return None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markers_received</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># end_time of current epoch</span>
+            <span class="n">end_time</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markers_received</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">markers_received</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">end_time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_input</span><span class="o">.</span><span class="n">channels</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">end_time</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">end_time</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># concatenate all markers received</span>
+        <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_input</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">markers_received</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">markers_received</span><span class="p">,</span> <span class="n">marker</span><span class="p">])</span>
+
+        <span class="c1"># initialize the end_time of current epoch and name of the next epoch</span>
+        <span class="n">end_time</span><span class="p">,</span> <span class="n">next_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_end_time</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="p">,</span> <span class="n">chunk</span><span class="p">])</span>
+            <span class="k">while</span> <span class="n">end_time</span> <span class="ow">and</span> <span class="nb">float</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">end_time</span><span class="p">:</span>  <span class="c1"># while the new chunk complete epochs do:</span>
+                <span class="c1"># get epoch</span>
+                <span class="n">epoch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">end_time</span><span class="p">]</span>
+                <span class="c1"># the rest is stored in persistence</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span> <span class="o">&gt;=</span> <span class="n">end_time</span><span class="p">]</span>
+
+                <span class="c1"># update the output</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_from_df</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
+
+                <span class="c1"># update the new current epoch name</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current_name</span> <span class="o">=</span> <span class="n">next_name</span>
+
+                <span class="c1"># drop marker from markers_recived and update end_time and next_name</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">markers_received</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">markers_received</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="n">end_time</span><span class="p">])</span>
+                <span class="n">end_time</span><span class="p">,</span> <span class="n">next_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_end_time</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="StimulationBasedEpoching"><a class="viewcode-back" href="../../../epoching.html#neuxus.nodes.epoching.StimulationBasedEpoching">[docs]</a><span class="k">class</span> <span class="nc">StimulationBasedEpoching</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Slices signal into epoch of a desired length following a stimulation event</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - output (Port): epoched output port</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - input_port (Port): input signal</span>
+<span class="sd">      - marker_input_port (Port): input markers</span>
+<span class="sd">      - stimulation (int or float or str): stimulation that trigger a new epoching,</span>
+<span class="sd">        the other event will be ignored, be carefull with the type of stimulation</span>
+<span class="sd">      - offset (float): offset to wait before starting epoching when receiving the stimulation</span>
+<span class="sd">      - duration (float): duration of epochs</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="n">marker_input_port</span><span class="p">,</span> <span class="n">stimulation</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">duration</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">marker_input</span> <span class="o">=</span> <span class="n">marker_input_port</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;epoch&#39;</span><span class="p">,</span>
+            <span class="n">channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+            <span class="n">epoching_frequency</span><span class="o">=</span><span class="mi">0</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">stimulation</span> <span class="o">=</span> <span class="n">stimulation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">duration</span> <span class="o">=</span> <span class="n">duration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span>
+
+        <span class="c1"># persitent is data of a non-complete epoch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([],</span> <span class="p">[],</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;marker port&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_input</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="s1">&#39;stimulation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">stimulation</span><span class="p">,</span>
+            <span class="s1">&#39;type stimulation&#39;</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stimulation</span><span class="p">),</span>
+            <span class="s1">&#39;offset&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span>
+            <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">})</span>
+
+        <span class="c1"># TO DO terminate</span>
+
+    <span class="k">def</span> <span class="nf">get_timing_from_marker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">marker_df</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_input</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">marker_index</span> <span class="ow">in</span> <span class="n">marker_df</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">marker_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">marker_index</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">stimulation</span><span class="p">:</span>
+                    <span class="n">start_time</span> <span class="o">=</span> <span class="n">marker_index</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span>
+                    <span class="n">end_time</span> <span class="o">=</span> <span class="n">start_time</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span>
+                    <span class="n">markers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">float</span><span class="p">(</span><span class="n">start_time</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">end_time</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">markers</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># update persistence</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="p">,</span> <span class="n">chunk</span><span class="p">])</span>
+
+        <span class="c1"># update markers received</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">markers</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_timing_from_marker</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">markers</span><span class="o">.</span><span class="n">copy</span><span class="p">():</span>
+                <span class="n">start_time</span><span class="p">,</span> <span class="n">end_time</span> <span class="o">=</span> <span class="n">marker</span>
+                <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">end_time</span><span class="p">:</span>
+                    <span class="c1"># get epoch</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span> <span class="o">&gt;=</span> <span class="n">start_time</span><span class="p">]</span>
+                    <span class="n">epoch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">end_time</span><span class="p">]</span>
+                    <span class="c1"># update the output</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_from_df</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">markers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">marker</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([],</span> <span class="p">[],</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, LaSEEB, S.Legeay.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'0.0.3',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE: 'true'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="../../../_static/language_data.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

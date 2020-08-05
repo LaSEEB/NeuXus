@@ -1,0 +1,337 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>io &mdash; NeuXus 0.0.3 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="NeuXus 0.0.3 documentation" href="index.html"/>
+        <link rel="up" title="API" href="api.html"/>
+        <link rel="next" title="log" href="log.html"/>
+        <link rel="prev" title="Generate" href="generate.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NeuXus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tuto1.html">Create a pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tuto2.html">Create your own node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cite_us.html">Cite us</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="api.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="classify.html">Classify</a></li>
+<li class="toctree-l2"><a class="reference internal" href="display.html">Display</a></li>
+<li class="toctree-l2"><a class="reference internal" href="epoch_function.html">Epoch functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="epoching.html">Epoching</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature.html">Feature</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filter.html">Filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="function.html">function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generate.html">Generate</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">io</a></li>
+<li class="toctree-l2"><a class="reference internal" href="log.html">log</a></li>
+<li class="toctree-l2"><a class="reference internal" href="processing.html">processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="read.html">read</a></li>
+<li class="toctree-l2"><a class="reference internal" href="select.html">select</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stimulator.html">stimulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="store.html">store</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NeuXus</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="api.html">API</a> &raquo;</li>
+        
+      <li>io</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/io.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="io">
+<span id="id1"></span><h1>io<a class="headerlink" href="#io" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-neuxus.nodes.io"></span><dl class="py class">
+<dt id="neuxus.nodes.io.LslReceive">
+<em class="property">class </em><code class="sig-prename descclassname">neuxus.nodes.io.</code><code class="sig-name descname">LslReceive</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">prop</span></em>, <em class="sig-param"><span class="n">value</span></em>, <em class="sig-param"><span class="n">data_type</span></em>, <em class="sig-param"><span class="n">sync</span><span class="o">=</span><span class="default_value">'local'</span></em>, <em class="sig-param"><span class="n">max_samples</span><span class="o">=</span><span class="default_value">4096</span></em>, <em class="sig-param"><span class="n">timeout</span><span class="o">=</span><span class="default_value">10.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/io.html#LslReceive"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.io.LslReceive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receive from a LSL stream.</p>
+<dl class="simple">
+<dt>Attributes:</dt><dd><ul class="simple">
+<li><p>input: input port</p></li>
+</ul>
+</dd>
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>prop (str): property used to resolve the stream (for example ‘name’)</p></li>
+<li><p>value (str): value associated to prop for resolving stream</p></li>
+<li><p>data_type (str): type of output value among [‘epoch’, ‘signal’, ‘vector’, ‘marker’]</p></li>
+<li><p>sync (string, None): The method used to synchronize timestamps. Use <code class="docutils literal notranslate"><span class="pre">local</span></code> if
+you receive the stream from another application on the same computer.
+Use <code class="docutils literal notranslate"><span class="pre">network</span></code> if you receive from another computer.</p></li>
+<li><p>max_samples (int): The maximum number of samples to return per call. Default is 4096</p></li>
+<li><p>timeout (float): time for the software to wait the stream</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="neuxus.nodes.io.LslSend">
+<em class="property">class </em><code class="sig-prename descclassname">neuxus.nodes.io.</code><code class="sig-name descname">LslSend</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_port</span></em>, <em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">type</span><span class="o">=</span><span class="default_value">'signal'</span></em>, <em class="sig-param"><span class="n">format</span><span class="o">=</span><span class="default_value">'double64'</span></em>, <em class="sig-param"><span class="n">uuid_</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/io.html#LslSend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.io.LslSend" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send to a LSL stream.</p>
+<dl class="simple">
+<dt>Attributes:</dt><dd><ul class="simple">
+<li><p>i (Port): Default data input, expects DataFrame.</p></li>
+</ul>
+</dd>
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>name (string): The name of the stream.</p></li>
+<li><p><a href="#id2"><span class="problematic" id="id3">type_</span></a> (string): The content type of the stream, .</p></li>
+<li><p>format (string): The format type for each channel. Currently, only <code class="docutils literal notranslate"><span class="pre">double64</span></code> and <code class="docutils literal notranslate"><span class="pre">string</span></code> are supported.</p></li>
+<li><p>uuid (string, None): The unique identifier for the stream. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will be auto-generated.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="neuxus.nodes.io.LslSend.connect">
+<code class="sig-name descname">connect</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/io.html#LslSend.connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.io.LslSend.connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an outlet for streaming data</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="neuxus.nodes.io.LslSend.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/io.html#LslSend.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.io.LslSend.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send data found in input port</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="neuxus.nodes.io.RdaReceive">
+<em class="property">class </em><code class="sig-prename descclassname">neuxus.nodes.io.</code><code class="sig-name descname">RdaReceive</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">rdaport</span></em>, <em class="sig-param"><span class="n">offset</span><span class="o">=</span><span class="default_value">0.0</span></em>, <em class="sig-param"><span class="n">host</span><span class="o">=</span><span class="default_value">'localhost'</span></em>, <em class="sig-param"><span class="n">timeout</span><span class="o">=</span><span class="default_value">10.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/io.html#RdaReceive"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.io.RdaReceive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receive a signal from RDA stream</p>
+<dl class="simple">
+<dt>Attributes:</dt><dd><ul class="simple">
+<li><p>output (Port): output port</p></li>
+<li><p>marker_output (Port): output marker port</p></li>
+</ul>
+</dd>
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>rdaport (int): rda port to connect with</p></li>
+<li><p>offset (float): offset (in second) to apply to incoming data timestamps, default is 0</p></li>
+<li><p>host (str): RDA host, default is ‘localhost’, it could be the IP adress of the host</p></li>
+<li><p>timeout (float): timeout in sec t get the RDA stream, default is 10</p></li>
+</ul>
+</dd>
+<dt>Example:</dt><dd><p>RdaReceive()
+RdaReceive(rdaport=52136, offset=.125, host=’159.10.20’)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="neuxus.nodes.io.UdpSend">
+<em class="property">class </em><code class="sig-prename descclassname">neuxus.nodes.io.</code><code class="sig-name descname">UdpSend</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_port</span></em>, <em class="sig-param"><span class="n">ip</span></em>, <em class="sig-param"><span class="n">port</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/io.html#UdpSend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.io.UdpSend" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple UDP client to send some data</p>
+<dl class="simple">
+<dt>Arguments:</dt><dd><ul class="simple">
+<li><p>input_port (Port): inout data port</p></li>
+<li><p>ip (str): IP address of UDP server which receive data</p></li>
+<li><p>port (int): socket port</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example: UdpSend(port895, ip=”127.0.0.1”, port=20001)</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="log.html" class="btn btn-neutral float-right" title="log" accesskey="n">Next →</a>
+      
+      
+        <a href="generate.html" class="btn btn-neutral" title="Generate" accesskey="p">← Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, LaSEEB, S.Legeay.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0.3',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE: 'true'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="_static/language_data.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

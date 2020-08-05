@@ -1,0 +1,351 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>select &mdash; NeuXus 0.0.3 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="NeuXus 0.0.3 documentation" href="index.html"/>
+        <link rel="up" title="API" href="api.html"/>
+        <link rel="next" title="stimulator" href="stimulator.html"/>
+        <link rel="prev" title="read" href="read.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NeuXus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tuto1.html">Create a pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tuto2.html">Create your own node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cite_us.html">Cite us</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="api.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="classify.html">Classify</a></li>
+<li class="toctree-l2"><a class="reference internal" href="display.html">Display</a></li>
+<li class="toctree-l2"><a class="reference internal" href="epoch_function.html">Epoch functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="epoching.html">Epoching</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feature.html">Feature</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filter.html">Filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="function.html">function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generate.html">Generate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">io</a></li>
+<li class="toctree-l2"><a class="reference internal" href="log.html">log</a></li>
+<li class="toctree-l2"><a class="reference internal" href="processing.html">processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="read.html">read</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">select</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stimulator.html">stimulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="store.html">store</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NeuXus</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="api.html">API</a> &raquo;</li>
+        
+      <li>select</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/select.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-neuxus.nodes.select">
+<span id="select"></span><h1>select<a class="headerlink" href="#module-neuxus.nodes.select" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="neuxus.nodes.select.ChannelSelector">
+<em class="property">class </em><code class="sig-prename descclassname">neuxus.nodes.select.</code><code class="sig-name descname">ChannelSelector</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_port</span></em>, <em class="sig-param"><span class="n">mode</span></em>, <em class="sig-param"><span class="n">selected</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/select.html#ChannelSelector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.select.ChannelSelector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select a subset of signal channels</p>
+<dl class="simple">
+<dt>Attributes:</dt><dd><ul class="simple">
+<li><p>output (port): output port</p></li>
+</ul>
+</dd>
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>mode (‘index’ or ‘name’): indicate the way to select data</p></li>
+<li><p>selected (list): column to be selected</p></li>
+</ul>
+</dd>
+<dt>Example:</dt><dd><p>ChannelSelector(port1, port2, ‘index’, [2, 4, 5])
+ChannelSelector(port1, port2, ‘name’, [‘Channel 2’, ‘Channel 4’])</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="neuxus.nodes.select.CommonAverageReference">
+<em class="property">class </em><code class="sig-prename descclassname">neuxus.nodes.select.</code><code class="sig-name descname">CommonAverageReference</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_port</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/select.html#CommonAverageReference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.select.CommonAverageReference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Re-referencing the signal to common average reference consists in
+subtracting from each sample the average value of the samples of all
+electrodes at this time
+Attributes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>output (port): output GroupOfPorts</p></li>
+</ul>
+</div></blockquote>
+<p>example: CommonReferenceChannel(input_port)</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="neuxus.nodes.select.ReferenceChannel">
+<em class="property">class </em><code class="sig-prename descclassname">neuxus.nodes.select.</code><code class="sig-name descname">ReferenceChannel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_port</span></em>, <em class="sig-param"><span class="n">mode</span></em>, <em class="sig-param"><span class="n">ref</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/select.html#ReferenceChannel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.select.ReferenceChannel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subtracts the value of the reference channel from all other channels
+Attributes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>output (port): output GroupOfPorts</p></li>
+</ul>
+</div></blockquote>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>mode (‘index’ or ‘name’): indicate the way to select data</p></li>
+<li><p>reference channel (str or int): column to be substracted</p></li>
+</ul>
+</dd>
+<dt>example: ReferenceChannel(input_port, ‘index’, 4)</dt><dd><p>or ReferenceChannel(input_port, ‘name’, ‘Cz’)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="neuxus.nodes.select.SpatialFilter">
+<em class="property">class </em><code class="sig-prename descclassname">neuxus.nodes.select.</code><code class="sig-name descname">SpatialFilter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_port</span></em>, <em class="sig-param"><span class="n">matrix</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/neuxus/nodes/select.html#SpatialFilter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#neuxus.nodes.select.SpatialFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maps M inputs to N outputs by multiplying the each input vector with a matrix</p>
+<dl>
+<dt>Attributes:</dt><dd><ul class="simple">
+<li><p>output (port): output GroupOfPorts</p></li>
+</ul>
+</dd>
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>input_port (port): input port</p></li>
+<li><p>matrix (dict or str): path to the matrix yaml/xml/cfg file OR dictionnary with new channel
+name as keys and list of coefficients as values, list must be of the same length as input.channels</p></li>
+</ul>
+</dd>
+<dt>Example:</dt><dd><ul>
+<li><p>SpatialFilter(input_port, ‘../example/my_matrix.yaml’)
+where my_matrix is the following yaml file:</p>
+<p>— # Matrix of coefficient for SpatialFilter
+OC1: [1, 1, 0, 4e-9]
+OC2: [4, 2, 4, -2]
+…</p>
+</li>
+<li><p>SpatialFilter(input_port, ‘../example/my_matrix.cfg’)
+where my_matrix is the following cfg file:</p>
+<blockquote>
+<div><p>&lt;SettingValue&gt;7.352412e-002 2.354113e-001 -1.212912e-001 -3.687871e-002 2.785947e-002 9.112804e-003
+2.665961e-001 1.635848e-001 -1.540287e-002 -1.944730e-002 -7.130017e-002 -6.074913e-001&lt;/SettingValue&gt;
+&lt;SettingValue&gt;2&lt;/SettingValue&gt;
+&lt;SettingValue&gt;6&lt;/SettingValue&gt;</p>
+</div></blockquote>
+<dl class="simple">
+<dt>(first setting values are coefficients</dt><dd><p>second one is the number of output channels
+last one is the number of input channels)</p>
+</dd>
+</dl>
+</li>
+<li><p>SpatialFilter(input_port, matrix)
+where matrix = {</p>
+<blockquote>
+<div><p>‘OC2’: [4, 0, -1e-2, 0],
+‘OC3’: [0, -1, 2, 4]</p>
+</div></blockquote>
+<p>}</p>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="stimulator.html" class="btn btn-neutral float-right" title="stimulator" accesskey="n">Next →</a>
+      
+      
+        <a href="read.html" class="btn btn-neutral" title="read" accesskey="p">← Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, LaSEEB, S.Legeay.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0.3',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE: 'true'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="_static/language_data.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

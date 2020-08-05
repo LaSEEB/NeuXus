@@ -1,0 +1,350 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Create your own node &mdash; NeuXus 0.0.3 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="NeuXus 0.0.3 documentation" href="index.html"/>
+        <link rel="next" title="Contribute" href="contribute.html"/>
+        <link rel="prev" title="Create a pipeline" href="tuto1.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NeuXus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tuto1.html">Create a pipeline</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Create your own node</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#neuxus-basis">NeuXus basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-node-template">A Node template</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cite_us.html">Cite us</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NeuXus</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Create your own node</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/tuto2.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="create-your-own-node">
+<span id="tutorial2"></span><h1>Create your own node<a class="headerlink" href="#create-your-own-node" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="neuxus-basis">
+<h2>NeuXus basis<a class="headerlink" href="#neuxus-basis" title="Permalink to this headline">¶</a></h2>
+<p>Before writing your own Node, you need to understand a bit how the softare works.</p>
+<a class="reference internal image-reference" href="_images/software.png"><img alt="Alternative text" src="_images/software.png" style="width: 700px;" /></a>
+<p>NeuXus first loads the pipeline script. It then repeates infinetely a loop that clears all Ports and updates each Node. The <code class="docutils literal notranslate"><span class="pre">update()</span></code> method of each Node is called at each iteration and get data from the input Port. NeuXus is stopped when <code class="docutils literal notranslate"><span class="pre">Esc</span></code> is pressed. All terminate function are then called.</p>
+<p>A Node has then 3 methods: <code class="docutils literal notranslate"><span class="pre">__init__()</span></code>, <code class="docutils literal notranslate"><span class="pre">update()</span></code> and <code class="docutils literal notranslate"><span class="pre">terminate()</span></code>:</p>
+<a class="reference internal image-reference" href="_images/node.png"><img alt="Alternative text" src="_images/node.png" style="width: 700px;" /></a>
+<p>A Node can have a Port as input and/or output. Ports can share different kind of Data stored in Pandas DataFrame (table). A Port is an iteration object, it means that to get its values, you need to iter over it:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">port</span> <span class="o">=</span> <span class="n">Port</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">port</span><span class="p">:</span>
+   <span class="o">...</span>
+</pre></div>
+</div>
+<p>Type of ports are:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">'signal'</span></code>: 1 iteration = 1 chunk of the continuous signal</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'epoch'</span></code>: 1 iteration = 1 epoch</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'marker'</span></code>: 1 iteration = 1 marker</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'spectrum'</span></code>: 1 iteration = 1 spectrum computed at one timestamp</p></li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="a-node-template">
+<h2>A Node template<a class="headerlink" href="#a-node-template" title="Permalink to this headline">¶</a></h2>
+<p>Get inspiration from the following <a class="reference download internal" download="" href="_downloads/cf6bdc31adffacdfce444cd80a7b7f35/pipeline_template.py"><code class="xref download docutils literal notranslate"><span class="pre">template</span></code></a> to write new pipelines.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># description of the module file at the very beginning of the file</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Detailed template for creating basic custom nodes</span>
+<span class="sd">For special and more complex nodes, please refer to the existing nodes</span>
+
+<span class="sd">author: ...</span>
+<span class="sd">mail: ...</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="c1"># import all usefull library</span>
+<span class="c1"># example:</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">signal</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">neuxus.node</span> <span class="kn">import</span> <span class="n">Node</span>
+
+
+<span class="k">class</span> <span class="nc">MyNewNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add global description,</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">      - output: output port</span>
+<span class="sd">    Args:</span>
+<span class="sd">      - input_port (Port): input port of type data_type</span>
+<span class="sd">      - arg1 (specify type): description</span>
+<span class="sd">      - arg2 (specify type): description, default is 4</span>
+
+<span class="sd">    Example: MyNewNode(Port4, 8, 12, order=5)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Initialize the node before running the pipeline&#39;&#39;&#39;</span>
+
+        <span class="c1"># create self.input and self.output</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">)</span>
+
+        <span class="c1"># make sure you get the right input.data_type</span>
+        <span class="c1"># data_type is either &#39;epoch&#39;, &#39;signal&#39;, &#39;marker&#39; or &#39;spectrum&#39;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;epoch&#39;</span><span class="p">,</span> <span class="s1">&#39;signal&#39;</span><span class="p">]</span>
+
+        <span class="c1"># update self.output parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="c1"># self.input.data_type if the data_type of output is the same as</span>
+            <span class="c1"># in input or among [&#39;epoch&#39;, &#39;signal&#39;, &#39;marker&#39;, &#39;spectrum&#39;]</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span><span class="p">,</span>
+            <span class="c1"># self.input.channels if the output channels are the same as</span>
+            <span class="c1"># in input else list of output channels ([&#39;Ch1&#39;, &#39;Ch2&#39;] for example)</span>
+            <span class="n">channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+            <span class="c1"># self.input.sampling_frequency if the output sampling frequency is the same as</span>
+            <span class="c1"># in input or specify the new output sampling frequency</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+            <span class="c1"># self.input.meta and/or add every details you want to add in meta</span>
+            <span class="n">meta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+            <span class="c1"># if the epoching frequency is unchanged (None or float), specify</span>
+            <span class="c1"># self.input.epoching_frequency else specify the new epoching frequency</span>
+            <span class="n">epoching_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">epoching_frequency</span>
+        <span class="p">)</span>
+
+        <span class="c1"># initialize parameters that will be useful for calculation:</span>
+        <span class="c1"># ex:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_arg1</span> <span class="o">=</span> <span class="n">arg1</span> <span class="o">/</span> <span class="mi">10</span>  <span class="c1"># _arg means a protected arg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span>
+
+        <span class="c1"># log all the parameters you think it is useful to log</span>
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="c1"># specify the name of the parameter, and its value</span>
+            <span class="s1">&#39;my arg1&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_arg1</span>
+        <span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Update the output&#39;&#39;&#39;</span>
+        <span class="c1"># iter over the input, you might receive several chunks per each global NeuXus iteration</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+            <span class="c1"># chunk type depends on self.input.data_type:</span>
+            <span class="c1"># &#39;marker&#39;: a DataFrame containing one marker</span>
+            <span class="c1"># &#39;signal&#39;: a DataFrame containing one chunk of the signal</span>
+            <span class="c1"># &#39;epoch&#39;: a DataFrame containig one epoch</span>
+            <span class="c1"># &#39;spectrum&#39;: a special DataFrame containing the signal</span>
+
+            <span class="c1"># to see more particularly what a chunk looks like add (for dev:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+
+            <span class="c1"># compute all necessary calculation</span>
+            <span class="c1"># ...</span>
+
+            <span class="c1"># to update the output port, use set or set_from_df</span>
+            <span class="c1"># for example:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">rows</span><span class="o">=</span><span class="n">chunk</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">timestamps</span><span class="o">=</span><span class="n">chunk</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_channels</span><span class="p">)</span>
+            <span class="c1"># or</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_from_df</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Feel free to share your Nodes to our community on <a class="reference external" href="https://github.com/LaSEEB/NeuXus">Github</a></p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="contribute.html" class="btn btn-neutral float-right" title="Contribute" accesskey="n">Next →</a>
+      
+      
+        <a href="tuto1.html" class="btn btn-neutral" title="Create a pipeline" accesskey="p">← Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, LaSEEB, S.Legeay.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0.3',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE: 'true'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="_static/language_data.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

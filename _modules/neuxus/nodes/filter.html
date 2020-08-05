@@ -1,0 +1,391 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>neuxus.nodes.filter &mdash; NeuXus 0.0.3 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+        <link rel="search" title="Search" href="../../../search.html"/>
+    <link rel="top" title="NeuXus 0.0.3 documentation" href="../../../index.html"/>
+        <link rel="up" title="Module code" href="../../index.html"/> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> NeuXus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tuto1.html">Create a pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tuto2.html">Create your own node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cite_us.html">Cite us</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">NeuXus</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>neuxus.nodes.filter</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for neuxus.nodes.filter</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">signal</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">from</span> <span class="nn">neuxus.node</span> <span class="kn">import</span> <span class="n">Node</span>
+
+
+<div class="viewcode-block" id="ButterFilter"><a class="viewcode-back" href="../../../filter.html#neuxus.nodes.filter.ButterFilter">[docs]</a><span class="k">class</span> <span class="nc">ButterFilter</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Bandpass filter for continuous signal</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - output: output port</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - input: get DataFrame and meta from input_ port</span>
+<span class="sd">      - lowcut (float): lowest frequence cut in Hz</span>
+<span class="sd">      - highcut (float): highest frequence cut in Hz</span>
+<span class="sd">      - order (int): order to be applied on the butter filter (recommended &lt; 16),</span>
+<span class="sd">      - default value is 4</span>
+
+<span class="sd">    Example: ButterFilter(Port4, 8, 12, order=5)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="n">lowcut</span><span class="p">,</span> <span class="n">highcut</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span><span class="p">,</span>
+            <span class="n">channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+            <span class="n">epoching_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">epoching_frequency</span>
+        <span class="p">)</span>
+
+        <span class="n">fs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span>
+        <span class="n">nyq</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs</span>
+        <span class="n">low</span> <span class="o">=</span> <span class="n">lowcut</span> <span class="o">/</span> <span class="n">nyq</span>
+        <span class="n">high</span> <span class="o">=</span> <span class="n">highcut</span> <span class="o">/</span> <span class="n">nyq</span>
+
+        <span class="c1"># calculate a and b, properties of the Butter filter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span>
+            <span class="n">order</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">],</span>
+            <span class="n">analog</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">btype</span><span class="o">=</span><span class="s1">&#39;band&#39;</span><span class="p">,</span>
+            <span class="n">output</span><span class="o">=</span><span class="s1">&#39;ba&#39;</span><span class="p">)</span>
+
+        <span class="c1"># initial condition zi</span>
+        <span class="n">len_to_conserve</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_a</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_b</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">),</span> <span class="n">len_to_conserve</span><span class="p">))</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;lowcut&#39;</span><span class="p">:</span> <span class="n">lowcut</span><span class="p">,</span>
+            <span class="s1">&#39;highcut&#39;</span><span class="p">:</span> <span class="n">highcut</span><span class="p">,</span>
+            <span class="s1">&#39;order&#39;</span><span class="p">:</span> <span class="n">order</span>
+        <span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+            <span class="c1"># filter</span>
+            <span class="n">y</span><span class="p">,</span> <span class="n">zf</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">lfilter</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_a</span><span class="p">,</span> <span class="n">chunk</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span> <span class="n">zi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_zi</span><span class="p">)</span>
+            <span class="c1"># zf are the future initial conditions</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_zi</span> <span class="o">=</span> <span class="n">zf</span>
+            <span class="c1"># update output port</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span>
+                            <span class="n">chunk</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="NotchFilter"><a class="viewcode-back" href="../../../filter.html#neuxus.nodes.filter.NotchFilter">[docs]</a><span class="k">class</span> <span class="nc">NotchFilter</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Band-stop filter with a narrow bandwidth (high quality factor). It rejects a narrow</span>
+<span class="sd">    frequency band and leaves the rest of the spectrum little changed.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - output: output port</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - input: get DataFrame and meta from input_ port</span>
+<span class="sd">      - frequency_to_remove(float): frequency to remove from the signal in Hz</span>
+<span class="sd">      - quality_factor(float): Dimensionless parameter that characterizes notch</span>
+<span class="sd">        filter -3 dB bandwidth bw relative to its center frequency, Q = frequency_to_remove/bw</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        NotchFilter(Port4, 10, 0.8)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="n">frequency_to_remove</span><span class="p">,</span> <span class="n">quality_factor</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span><span class="p">,</span>
+            <span class="n">channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+            <span class="n">epoching_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">epoching_frequency</span>
+        <span class="p">)</span>
+
+        <span class="c1"># calculate a and b, properties of the Butter filter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">iirnotch</span><span class="p">(</span>
+            <span class="n">w0</span><span class="o">=</span><span class="n">frequency_to_remove</span><span class="p">,</span>
+            <span class="n">Q</span><span class="o">=</span><span class="n">quality_factor</span><span class="p">,</span>
+            <span class="n">fs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)</span>
+
+        <span class="c1"># initial condition zi</span>
+        <span class="n">len_to_conserve</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_a</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_b</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">),</span> <span class="n">len_to_conserve</span><span class="p">))</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;frequency to remove&#39;</span><span class="p">:</span> <span class="n">frequency_to_remove</span><span class="p">,</span>
+            <span class="s1">&#39;quality factor&#39;</span><span class="p">:</span> <span class="n">quality_factor</span>
+        <span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+            <span class="c1"># filter</span>
+            <span class="n">y</span><span class="p">,</span> <span class="n">zf</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">lfilter</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_a</span><span class="p">,</span> <span class="n">chunk</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span> <span class="n">zi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_zi</span><span class="p">)</span>
+            <span class="c1"># zf are the future initial conditions</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_zi</span> <span class="o">=</span> <span class="n">zf</span>
+            <span class="c1"># update output port</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span>
+                            <span class="n">chunk</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DownSample"><a class="viewcode-back" href="../../../filter.html#neuxus.nodes.filter.DownSample">[docs]</a><span class="k">class</span> <span class="nc">DownSample</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Downsample the signal after applying an anti-aliasing filter</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - output (Port): output signal port of sampling frequency / factor</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - input (Port): input signal port</span>
+<span class="sd">      - downsampling_factor (int): downsampling factor (recommanded under 13)</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        DownSample(port45, 5)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="n">downsampling_factor</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span> <span class="o">==</span> <span class="s1">&#39;signal&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_downsampling_factor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">downsampling_factor</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span><span class="p">,</span>
+            <span class="n">channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_downsampling_factor</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+            <span class="n">epoching_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">epoching_frequency</span>
+        <span class="p">)</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;downsampling factor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_downsampling_factor</span>
+        <span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([],</span> <span class="p">[],</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="p">,</span> <span class="n">chunk</span><span class="p">])</span>
+            <span class="n">nb_rows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="p">)</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">nb_rows</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">_downsampling_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_downsampling_factor</span>
+            <span class="n">to_compute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:</span><span class="n">n</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">to_keep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">n</span><span class="p">:,</span> <span class="p">:]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">decimate</span><span class="p">(</span><span class="n">to_compute</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_downsampling_factor</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="c1"># to_compute does not have enough rows to be downsampled</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">persistent</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">t</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_downsampling_factor</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))]</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">persistent</span> <span class="o">=</span> <span class="n">to_keep</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, LaSEEB, S.Legeay.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'0.0.3',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE: 'true'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="../../../_static/language_data.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

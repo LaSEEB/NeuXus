@@ -1,0 +1,422 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Create a pipeline &mdash; NeuXus 0.0.3 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="NeuXus 0.0.3 documentation" href="index.html"/>
+        <link rel="next" title="Create your own node" href="tuto2.html"/>
+        <link rel="prev" title="Usage" href="usage.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> NeuXus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Create a pipeline</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#a-simple-example">A simple example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-more-complicated-example">A more complicated example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#write-your-pipeline">Write your pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tuto2.html">Create your own node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cite_us.html">Cite us</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">NeuXus</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Create a pipeline</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/tuto1.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="create-a-pipeline">
+<span id="tutorial1"></span><h1>Create a pipeline<a class="headerlink" href="#create-a-pipeline" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="a-simple-example">
+<h2>A simple example<a class="headerlink" href="#a-simple-example" title="Permalink to this headline">¶</a></h2>
+<p>NeuXus loads and executes a py file (called the pipeline script) at the beginning of its execution, this file describes the pipeline. It initializes all Nodes and links between them.</p>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">neuxus.nodes</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1"># dir_path is the path to directory containing this file</span>
+<span class="n">stim_cfg</span> <span class="o">=</span> <span class="n">dir_path</span> <span class="o">+</span> <span class="s1">&#39;/stimulation_config_1.xml&#39;</span>
+
+<span class="c1"># Node 1</span>
+<span class="n">generated_markers</span> <span class="o">=</span> <span class="n">stimulator</span><span class="o">.</span><span class="n">Stimulator</span><span class="p">(</span>
+    <span class="n">file</span><span class="o">=</span><span class="n">stim_cfg</span>
+<span class="p">)</span>
+
+<span class="c1"># Node 2</span>
+<span class="n">sending</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">LslSend</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">generated_markers</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;my_simulation&#39;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;marker&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Try the following command to run this pipeline</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ neuxus -e basics/stimulate_send.py
+</pre></div>
+</div>
+<p>This pipeline reads the stimulations config with the Stimulator Node first (refer to <a class="reference internal" href="stimulator.html#stimulator"><span class="std std-ref">stimulator</span></a>), and then send the stimulations via LSL with the second Node LslSend (refer to <a class="reference internal" href="io.html#io"><span class="std std-ref">io</span></a>). To link the Stimulator to the LslSend, LslSend takes as <code class="docutils literal notranslate"><span class="pre">input_port</span></code>, the <code class="docutils literal notranslate"><span class="pre">output</span></code> attribute of the Stimulator, <code class="docutils literal notranslate"><span class="pre">generated_markers.output</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">output</span></code> attribute is of type Port, and enables to share data between Nodes. Not every Node has that attribute, read the <a class="reference internal" href="api.html#api"><span class="std std-ref">API</span></a>!</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Do not name Nodes with the same name, else they will override each others.</p>
+</div>
+</div>
+<div class="section" id="a-more-complicated-example">
+<h2>A more complicated example<a class="headerlink" href="#a-more-complicated-example" title="Permalink to this headline">¶</a></h2>
+<p>This pipeline sends by LSL a simple DSP feedback calculated in real-time:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">neuxus.nodes</span> <span class="kn">import</span> <span class="o">*</span>
+
+
+<span class="k">def</span> <span class="nf">square</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="c1"># x is a matrix of a row</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">2</span>
+
+
+<span class="n">lsl_reception</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">LslReceive</span><span class="p">(</span>
+    <span class="n">prop</span><span class="o">=</span><span class="s1">&#39;type&#39;</span><span class="p">,</span>
+    <span class="n">value</span><span class="o">=</span><span class="s1">&#39;EEG&#39;</span><span class="p">,</span>
+    <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;signal&#39;</span>
+<span class="p">)</span>
+
+<span class="n">butter_filter</span> <span class="o">=</span> <span class="nb">filter</span><span class="o">.</span><span class="n">ButterFilter</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">lsl_reception</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">lowcut</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">highcut</span><span class="o">=</span><span class="mi">12</span>
+<span class="p">)</span>
+
+<span class="n">apply_function</span> <span class="o">=</span> <span class="n">function</span><span class="o">.</span><span class="n">ApplyFunction</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">butter_filter</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">function</span><span class="o">=</span><span class="n">square</span>
+<span class="p">)</span>
+
+<span class="n">epoch</span> <span class="o">=</span> <span class="n">epoching</span><span class="o">.</span><span class="n">TimeBasedEpoching</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">apply_function</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">duration</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">interval</span><span class="o">=</span><span class="mf">0.5</span>
+<span class="p">)</span>
+
+<span class="n">average</span> <span class="o">=</span> <span class="n">epoch_function</span><span class="o">.</span><span class="n">UnvariateStat</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">epoch</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">stat</span><span class="o">=</span><span class="s1">&#39;mean&#39;</span>
+<span class="p">)</span>
+
+<span class="n">lsl_send</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">LslSend</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">average</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;mySignalEpoched&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>It first receives the signal from LSL, then filters it with a bandpass <span class="xref std std-ref">ButterFilter</span>, squares it with <span class="xref std std-ref">ApplyFunction</span>. The signal is epoched every 0.5s on a range of 1s and averaged epoch by epoch. The DSP is then sent via LSL.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The pipeline script is only executed once when running NeuXus, users can then define functions, constants that can be used to build Nodes.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The processing frequency of NeuXus is self-regulated, the software calculates all updates as quickly as possible and then waits for the next data entry.</p>
+<ul class="simple">
+<li><p>If the RAM is overloaded (because of other running software or because there are too many nodes in the pipeline), the loop takes longer to complete. This may involve a significant (and exponentially increasing) delay.</p></li>
+<li><p>If stimuli are used outside the software (via LSL for example), divide your pipeline, one with the independent stimulator, the other with the rest: this ensures that the pipeline does not slow down the sending of stimulation via LSL.</p></li>
+</ul>
+</div>
+</div>
+<div class="section" id="write-your-pipeline">
+<h2>Write your pipeline<a class="headerlink" href="#write-your-pipeline" title="Permalink to this headline">¶</a></h2>
+<p>Get inspiration from the following <a class="reference download internal" download="" href="_downloads/cf6bdc31adffacdfce444cd80a7b7f35/pipeline_template.py"><code class="xref download docutils literal notranslate"><span class="pre">template</span></code></a> to write new pipelines.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># description of the pipeline</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Detailed template for creating basic NeuXus scripts</span>
+<span class="sd">Refer to the examples for more complex pipelines and possibilities.</span>
+
+<span class="sd">author: ...</span>
+<span class="sd">mail: ...</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># import usefull library</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="c1"># import all nodes from neuxus</span>
+<span class="c1"># refer to the API to see all available nodes</span>
+<span class="kn">from</span> <span class="nn">neuxus.nodes</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1"># import your customized nodes from a file located in the same directory as your pipeline script</span>
+<span class="kn">from</span> <span class="nn">my_custom_node_file</span> <span class="kn">import</span> <span class="n">MyCustomNode</span>
+
+<span class="c1"># this script is executed at the very beginning, you can initialze some data, parameters</span>
+<span class="c1"># and create all Nodes you need for your pipeline</span>
+
+<span class="c1"># for example</span>
+<span class="n">date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">_%H%M%S&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">date</span><span class="p">)</span>
+<span class="n">features_file</span> <span class="o">=</span> <span class="s1">&#39;my_path&#39;</span> <span class="o">+</span> <span class="n">date</span>
+
+<span class="c1"># stimulation and visualization</span>
+<span class="n">lsl_markers</span> <span class="o">=</span> <span class="n">stimulator</span><span class="o">.</span><span class="n">Stimulator</span><span class="p">(</span>
+    <span class="n">file</span><span class="o">=</span><span class="n">dir_path</span> <span class="o">+</span> <span class="s1">&#39;config_ov.xml&#39;</span>  <span class="c1"># dir_path is the path to the directory containing the current script</span>
+<span class="p">)</span>
+
+<span class="c1"># data aqcuisition from LSL stream</span>
+<span class="n">lsl_signal</span> <span class="o">=</span> <span class="n">generate</span><span class="o">.</span><span class="n">Generator</span><span class="p">(</span>
+    <span class="n">generator</span><span class="o">=</span><span class="s1">&#39;simulation&#39;</span><span class="p">,</span>
+    <span class="n">nb_channels</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">sampling_frequency</span><span class="o">=</span><span class="mi">250</span>
+<span class="p">)</span>
+<span class="c1"># or from simulation</span>
+<span class="n">lsl_signal</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">LslReceive</span><span class="p">(</span>
+    <span class="n">prop</span><span class="o">=</span><span class="s1">&#39;name&#39;</span><span class="p">,</span>
+    <span class="n">value</span><span class="o">=</span><span class="s1">&#39;LiveAmpSN-054207-0168&#39;</span><span class="p">,</span>
+    <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;signal&#39;</span><span class="p">,</span>
+    <span class="n">sync</span><span class="o">=</span><span class="s1">&#39;network&#39;</span>
+<span class="p">)</span>
+
+<span class="c1"># to link node, use the attribute output in input_port arg of another node</span>
+
+<span class="c1"># channel selection</span>
+<span class="n">selected_chans</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">ChannelSelector</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">lsl_signal</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">,</span>
+    <span class="n">selected</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">25</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># temporal filtering</span>
+<span class="n">butter_filter</span> <span class="o">=</span> <span class="nb">filter</span><span class="o">.</span><span class="n">ButterFilter</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">selected_chans</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">lowcut</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">highcut</span><span class="o">=</span><span class="mi">12</span>
+<span class="p">)</span>
+
+<span class="c1"># time-based epoching</span>
+<span class="n">time_epoch</span> <span class="o">=</span> <span class="n">epoching</span><span class="o">.</span><span class="n">TimeBasedEpoching</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">butter_filter</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">duration</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">interval</span><span class="o">=</span><span class="mf">0.25</span>
+<span class="p">)</span>
+
+<span class="c1"># averaging</span>
+<span class="n">average_epoch</span> <span class="o">=</span> <span class="n">epoch_function</span><span class="o">.</span><span class="n">UnivariateStat</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">time_epoch</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">stat</span><span class="o">=</span><span class="s1">&#39;mean&#39;</span>
+<span class="p">)</span>
+
+<span class="c1"># save features</span>
+<span class="n">tocsvL</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">ToCsv</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">average_epoch</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+    <span class="n">file</span><span class="o">=</span><span class="n">features_file</span>
+<span class="p">)</span>
+
+<span class="c1"># my custom node</span>
+<span class="n">my_node</span> <span class="o">=</span> <span class="n">MyCustomNode</span><span class="p">(</span>
+    <span class="n">input_port</span><span class="o">=</span><span class="n">average_epoch</span><span class="o">.</span><span class="n">output</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Users can load their own Nodes in pipeline (see <a class="reference internal" href="tuto2.html#tutorial2"><span class="std std-ref">Create your own node</span></a>).</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tuto2.html" class="btn btn-neutral float-right" title="Create your own node" accesskey="n">Next →</a>
+      
+      
+        <a href="usage.html" class="btn btn-neutral" title="Usage" accesskey="p">← Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, LaSEEB, S.Legeay.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0.3',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE: 'true'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="_static/language_data.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

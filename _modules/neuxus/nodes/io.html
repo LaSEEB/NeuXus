@@ -1,0 +1,623 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>neuxus.nodes.io &mdash; NeuXus 0.0.3 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+        <link rel="search" title="Search" href="../../../search.html"/>
+    <link rel="top" title="NeuXus 0.0.3 documentation" href="../../../index.html"/>
+        <link rel="up" title="Module code" href="../../index.html"/> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> NeuXus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tuto1.html">Create a pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tuto2.html">Create your own node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cite_us.html">Cite us</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">NeuXus</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>neuxus.nodes.io</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for neuxus.nodes.io</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">struct</span> <span class="kn">import</span> <span class="n">unpack</span>
+<span class="kn">from</span> <span class="nn">socket</span> <span class="kn">import</span> <span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="n">SOCK_DGRAM</span><span class="p">,</span> <span class="n">socket</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+<span class="kn">from</span> <span class="nn">pylsl</span> <span class="kn">import</span> <span class="p">(</span><span class="n">StreamInfo</span><span class="p">,</span> <span class="n">StreamOutlet</span><span class="p">,</span>
+                   <span class="n">StreamInlet</span><span class="p">,</span> <span class="n">resolve_byprop</span><span class="p">,</span> <span class="n">pylsl</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">neuxus.node</span> <span class="kn">import</span> <span class="n">Node</span>
+<span class="kn">from</span> <span class="nn">neuxus.chunks</span> <span class="kn">import</span> <span class="n">Port</span>
+
+
+<div class="viewcode-block" id="LslSend"><a class="viewcode-back" href="../../../io.html#neuxus.nodes.io.LslSend">[docs]</a><span class="k">class</span> <span class="nc">LslSend</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Send to a LSL stream.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - i (Port): Default data input, expects DataFrame.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - name (string): The name of the stream.</span>
+<span class="sd">      - type_ (string): The content type of the stream, .</span>
+<span class="sd">      - format (string): The format type for each channel. Currently, only ``double64`` and ``string`` are supported.</span>
+<span class="sd">      - uuid (string, None): The unique identifier for the stream. If ``None``, it will be auto-generated.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_dtypes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;double64&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">,</span> <span class="s2">&quot;string&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">object</span><span class="p">,</span> <span class="s1">&#39;float32&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">,</span> <span class="s1">&#39;int32&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;signal&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;double64&quot;</span><span class="p">,</span> <span class="n">uuid_</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">data_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;epoch&#39;</span><span class="p">,</span> <span class="s1">&#39;signal&#39;</span><span class="p">,</span> <span class="s1">&#39;marker&#39;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_format</span> <span class="o">=</span> <span class="nb">format</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outlet</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">sampling_frequency</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">uuid_</span><span class="p">:</span>
+            <span class="n">uuid_</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uuid</span> <span class="o">=</span> <span class="n">uuid_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span>
+            <span class="s1">&#39;frequency&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span><span class="p">,</span>
+            <span class="s1">&#39;channels&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span>
+        <span class="p">})</span>
+
+<div class="viewcode-block" id="LslSend.connect"><a class="viewcode-back" href="../../../io.html#neuxus.nodes.io.LslSend.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Create an outlet for streaming data&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">outlet</span><span class="p">:</span>
+
+            <span class="c1"># metadata</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">StreamInfo</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_type</span><span class="p">,</span>
+                <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_format</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">uuid</span>
+            <span class="p">)</span>
+            <span class="n">channels</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">desc</span><span class="p">()</span><span class="o">.</span><span class="n">append_child</span><span class="p">(</span><span class="s2">&quot;channels&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
+                <span class="n">channels</span><span class="o">.</span><span class="n">append_child</span><span class="p">(</span><span class="s2">&quot;channel&quot;</span><span class="p">)</span>\
+                    <span class="o">.</span><span class="n">append_child_value</span><span class="p">(</span><span class="s2">&quot;label&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">label</span><span class="p">))</span>\
+                    <span class="o">.</span><span class="n">append_child_value</span><span class="p">(</span><span class="s2">&quot;unit&quot;</span><span class="p">,</span> <span class="s2">&quot;unknown&quot;</span><span class="p">)</span>\
+                    <span class="o">.</span><span class="n">append_child_value</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;signal&quot;</span><span class="p">)</span>
+
+            <span class="c1"># create the outlet</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">outlet</span> <span class="o">=</span> <span class="n">StreamOutlet</span><span class="p">(</span><span class="n">info</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LslSend.update"><a class="viewcode-back" href="../../../io.html#neuxus.nodes.io.LslSend.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Send data found in input port&#39;&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span>
+                <span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_dtypes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_format</span><span class="p">]])</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">stamps</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">stamp</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">stamps</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">outlet</span><span class="o">.</span><span class="n">push_sample</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">stamp</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="LslReceive"><a class="viewcode-back" href="../../../io.html#neuxus.nodes.io.LslReceive">[docs]</a><span class="k">class</span> <span class="nc">LslReceive</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Receive from a LSL stream.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - input: input port</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - prop (str): property used to resolve the stream (for example &#39;name&#39;)</span>
+<span class="sd">      - value (str): value associated to prop for resolving stream</span>
+<span class="sd">      - data_type (str): type of output value among [&#39;epoch&#39;, &#39;signal&#39;, &#39;vector&#39;, &#39;marker&#39;]</span>
+<span class="sd">      - sync (string, None): The method used to synchronize timestamps. Use ``local`` if</span>
+<span class="sd">        you receive the stream from another application on the same computer.</span>
+<span class="sd">        Use ``network`` if you receive from another computer.</span>
+<span class="sd">      - max_samples (int): The maximum number of samples to return per call. Default is 4096</span>
+<span class="sd">      - timeout (float): time for the software to wait the stream</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prop</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">data_type</span><span class="p">,</span> <span class="n">sync</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">max_samples</span><span class="o">=</span><span class="mi">1024</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">10.0</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">data_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;epoch&#39;</span><span class="p">,</span> <span class="s1">&#39;signal&#39;</span><span class="p">,</span> <span class="s1">&#39;vector&#39;</span><span class="p">,</span> <span class="s1">&#39;marker&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_type</span> <span class="o">=</span> <span class="n">data_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inlet</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prop</span> <span class="o">=</span> <span class="n">prop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sync</span> <span class="o">=</span> <span class="n">sync</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_samples</span> <span class="o">=</span> <span class="n">max_samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">pylsl</span><span class="o">.</span><span class="n">local_clock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span> <span class="o">=</span> <span class="n">timeout</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;channels&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+            <span class="s1">&#39;sampling frequency&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span><span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">inlet</span><span class="p">:</span>
+            <span class="c1"># resolve streams</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Resolving streams with </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_prop</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">streams</span> <span class="o">=</span> <span class="n">resolve_byprop</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_prop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">streams</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;No stream found&#39;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">Exception</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">streams</span><span class="p">)</span><span class="si">}</span><span class="s1"> stream(s) acquired&#39;</span><span class="p">)</span>
+            <span class="c1"># Stream acquired</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inlet</span> <span class="o">=</span> <span class="n">StreamInlet</span><span class="p">(</span><span class="n">streams</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inlet</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">info</span><span class="o">.</span><span class="n">name</span><span class="p">(),</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">info</span><span class="o">.</span><span class="n">type</span><span class="p">(),</span>
+                <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="n">info</span><span class="o">.</span><span class="n">nominal_srate</span><span class="p">(),</span>
+                <span class="s2">&quot;info&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">as_xml</span><span class="p">())</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+            <span class="p">}</span>
+
+            <span class="n">channels</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">info</span><span class="o">.</span><span class="n">desc</span><span class="p">()</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s2">&quot;channels&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+                <span class="n">channel</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">desc</span><span class="p">()</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s2">&quot;channels&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s2">&quot;channel&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">channel_count</span><span class="p">()):</span>
+                    <span class="n">channel_name</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="n">child_value</span><span class="p">(</span><span class="s2">&quot;label&quot;</span><span class="p">)</span>
+                    <span class="n">channels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+                    <span class="n">channel</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="n">next_sibling</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">channels</span><span class="p">:</span>
+                <span class="n">channels</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;Ch</span><span class="si">{</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">channel_count</span><span class="p">())]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">channels</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">nominal_srate</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+                <span class="n">data_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_type</span><span class="p">,</span>
+                <span class="n">channels</span><span class="o">=</span><span class="n">channels</span><span class="p">,</span>
+                <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span><span class="p">,</span>
+                <span class="n">meta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inlet</span><span class="p">:</span>
+            <span class="n">values</span><span class="p">,</span> <span class="n">stamps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inlet</span><span class="o">.</span><span class="n">pull_chunk</span><span class="p">(</span>
+                <span class="n">max_samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_samples</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">stamps</span><span class="p">:</span>
+                <span class="n">stamps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">stamps</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sync</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
+                    <span class="n">stamps</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">sync</span> <span class="o">==</span> <span class="s2">&quot;network&quot;</span><span class="p">:</span>
+                    <span class="n">stamps</span> <span class="o">=</span> <span class="n">stamps</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">inlet</span><span class="o">.</span><span class="n">time_correction</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">sync</span> <span class="o">==</span> <span class="s1">&#39;special&#39;</span><span class="p">:</span>
+                    <span class="n">stamps</span> <span class="o">=</span> <span class="n">stamps</span>
+                <span class="c1"># stamps = pd.to_datetime(stamps, format=None)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stamps</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">stamps</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">stamps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="UdpSend"><a class="viewcode-back" href="../../../io.html#neuxus.nodes.io.UdpSend">[docs]</a><span class="k">class</span> <span class="nc">UdpSend</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Simple UDP client to send some data</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">      - input_port (Port): inout data port</span>
+<span class="sd">      - ip (str): IP address of UDP server which receive data</span>
+<span class="sd">      - port (int): socket port</span>
+
+<span class="sd">    Example: UdpSend(port895, ip=&quot;127.0.0.1&quot;, port=20001)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_port</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_server_address_port</span> <span class="o">=</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+        <span class="c1"># Create the UDP socket</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">family</span><span class="o">=</span><span class="n">AF_INET</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;IP&#39;</span><span class="p">:</span> <span class="n">ip</span><span class="p">,</span>
+            <span class="s1">&#39;port&#39;</span><span class="p">:</span> <span class="n">port</span><span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+            <span class="n">bytes_to_send</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">bytes_to_send</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_server_address_port</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="RdaReceive"><a class="viewcode-back" href="../../../io.html#neuxus.nodes.io.RdaReceive">[docs]</a><span class="k">class</span> <span class="nc">RdaReceive</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Receive a signal from RDA stream</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - output (Port): output port</span>
+<span class="sd">      - marker_output (Port): output marker port</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - rdaport (int): rda port to connect with</span>
+<span class="sd">      - offset (float): offset (in second) to apply to incoming data timestamps, default is 0</span>
+<span class="sd">      - host (str): RDA host, default is &#39;localhost&#39;, it could be the IP adress of the host</span>
+<span class="sd">      - timeout (float): timeout in sec t get the RDA stream, default is 10</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        RdaReceive()</span>
+<span class="sd">        RdaReceive(rdaport=52136, offset=.125, host=&#39;159.10.20&#39;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rdaport</span><span class="p">,</span> <span class="n">offset</span><span class="o">=.</span><span class="mi">0</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">10.0</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_buf_size_max</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="mi">15</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rdaport</span> <span class="o">=</span> <span class="n">rdaport</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">=</span> <span class="n">offset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span> <span class="o">=</span> <span class="n">timeout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_host</span> <span class="o">=</span> <span class="n">host</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;signal&#39;</span><span class="p">,</span>
+            <span class="n">channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_channels</span><span class="p">,</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">marker_output</span> <span class="o">=</span> <span class="n">Port</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">marker_output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;marker&#39;</span><span class="p">,</span>
+            <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Markers&#39;</span><span class="p">],</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;marquers output&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_output</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="s1">&#39;channels&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channels</span><span class="p">,</span>
+            <span class="s1">&#39;sampling frequency&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span>
+        <span class="p">})</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_persistent</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_block</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_time</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Create a tcpip socket</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_my_socket</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">)</span>
+        <span class="c1"># RECView: 51254, Recorder: 51244, use 51234 to connect with 16Bit Port</span>
+        <span class="n">starttime</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">while</span> <span class="n">flag</span><span class="p">:</span>  <span class="c1"># wait for the socket connection</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_my_socket</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rdaport</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">ConnectionRefusedError</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">starttime</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;No RDA stream found&#39;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>  <span class="c1"># wait for the starting message</span>
+            <span class="c1"># Get message header as raw array of chars</span>
+            <span class="n">rawhdr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_receive_data</span><span class="p">(</span><span class="mi">24</span><span class="p">)</span>
+
+            <span class="c1"># Split array into usefull information id1 to id4 are constants</span>
+            <span class="p">(</span><span class="n">id1</span><span class="p">,</span> <span class="n">id2</span><span class="p">,</span> <span class="n">id3</span><span class="p">,</span> <span class="n">id4</span><span class="p">,</span> <span class="n">msgsize</span><span class="p">,</span> <span class="n">msgtype</span><span class="p">)</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;llllLL&#39;</span><span class="p">,</span> <span class="n">rawhdr</span><span class="p">)</span>
+
+            <span class="c1"># Get data part of message, which is of variable size</span>
+            <span class="n">rawdata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_receive_data</span><span class="p">(</span><span class="n">msgsize</span> <span class="o">-</span> <span class="mi">24</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">msgtype</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c1"># Start message, extract eeg properties</span>
+                <span class="p">(</span><span class="n">channel_count</span><span class="p">,</span> <span class="n">sampling_interval</span><span class="p">,</span> <span class="n">resolutions</span><span class="p">,</span>
+                 <span class="n">channel_names</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_properties</span><span class="p">(</span><span class="n">rawdata</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span> <span class="o">=</span> <span class="mi">1000000</span> <span class="o">/</span> <span class="n">sampling_interval</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">channel_names</span><span class="p">:</span>
+                    <span class="n">channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;Ch</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">channel_count</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_channels</span> <span class="o">=</span> <span class="n">channel_names</span>
+                <span class="k">return</span>
+            <span class="k">if</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">starttime</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Timeout&#39;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">Exception</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># receive all data from socket</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_my_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_buf_size_max</span><span class="p">)</span>
+        <span class="c1"># concatenate with last value in persitence</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_persistent</span> <span class="o">+</span> <span class="n">raw</span>
+        <span class="c1"># initialize loop</span>
+        <span class="n">data_to_send</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">timestamps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">while</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">24</span><span class="p">:</span>
+                <span class="c1"># get info from 24 fisrt bytes</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[:</span><span class="mi">24</span><span class="p">]</span>
+                <span class="p">(</span><span class="n">id1</span><span class="p">,</span> <span class="n">id2</span><span class="p">,</span> <span class="n">id3</span><span class="p">,</span> <span class="n">id4</span><span class="p">,</span> <span class="n">msgsize</span><span class="p">,</span> <span class="n">msgtype</span><span class="p">)</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;llllLL&#39;</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">msgsize</span><span class="p">:</span>  <span class="c1"># test if we already get the full message in buffer</span>
+                    <span class="c1"># get data of current message</span>
+                    <span class="n">rawdata</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="mi">24</span><span class="p">:</span><span class="n">msgsize</span><span class="p">]</span>
+                    <span class="c1"># store the rest in raw</span>
+                    <span class="n">raw</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="n">msgsize</span><span class="p">:]</span>
+                    <span class="k">if</span> <span class="n">msgtype</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>  <span class="c1"># if the message contains data do:</span>
+                        <span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">markers</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_data</span><span class="p">(</span><span class="n">rawdata</span><span class="p">)</span>
+                        <span class="c1"># test overflow of block (ie if we do not receive a block)</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_block</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">block</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_block</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                                <span class="s2">&quot;Overflow when getting data from RDA, clock is reset &quot;</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_time</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="c1"># update last_block</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_last_block</span> <span class="o">=</span> <span class="n">block</span>
+                        <span class="c1"># concatenate data</span>
+                        <span class="n">data_to_send</span> <span class="o">+=</span> <span class="n">data</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_time</span><span class="p">:</span>  <span class="c1"># set the local clock</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">points</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span>
+                        <span class="n">timestamps</span> <span class="o">+=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_time</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="n">i</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">points</span><span class="p">)]</span>
+                        <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="n">markers</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">marker_output</span><span class="o">.</span><span class="n">set</span><span class="p">([</span><span class="n">marker</span><span class="p">[</span><span class="s1">&#39;message&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span> <span class="o">*</span> <span class="n">marker</span><span class="p">[</span><span class="s1">&#39;points&#39;</span><span class="p">],</span> <span class="p">[</span><span class="n">timestamps</span><span class="p">[</span><span class="n">marker</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">marker</span><span class="p">[</span><span class="s1">&#39;points&#39;</span><span class="p">]))])</span>
+                        <span class="c1"># self._time points to the timestamp of first row from next block</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_time</span> <span class="o">=</span> <span class="n">timestamps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frequency</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># add to persitence and stop iterations</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_persistent</span> <span class="o">=</span> <span class="n">raw</span>
+                    <span class="n">flag</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># add to persitence and stop iterations</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_persistent</span> <span class="o">=</span> <span class="n">raw</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">timestamps</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># send data in output</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">data_to_send</span><span class="p">,</span> <span class="n">timestamps</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channels</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_receive_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">requestedSize</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper function for receiving a whole message&quot;&quot;&quot;</span>
+        <span class="n">returnStream</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">returnStream</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">requestedSize</span><span class="p">:</span>
+            <span class="n">databytes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_my_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">requestedSize</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">returnStream</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">databytes</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;connection broken&quot;</span><span class="p">)</span>
+            <span class="n">returnStream</span> <span class="o">+=</span> <span class="n">databytes</span>
+        <span class="k">return</span> <span class="n">returnStream</span>
+
+    <span class="k">def</span> <span class="nf">_split_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper function for splitting a raw array of</span>
+<span class="sd">        zero terminated strings (C) into an array of python strings&quot;&quot;&quot;</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">raw</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span><span class="p">)]</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="k">def</span> <span class="nf">_get_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rawdata</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Function for extracting eeg properties from a raw data array</span>
+<span class="sd">        read from tcpip socket&quot;&quot;&quot;</span>
+
+        <span class="c1"># Extract numerical data</span>
+        <span class="p">(</span><span class="n">channelCount</span><span class="p">,</span> <span class="n">samplingInterval</span><span class="p">)</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;Ld&#39;</span><span class="p">,</span> <span class="n">rawdata</span><span class="p">[:</span><span class="mi">12</span><span class="p">])</span>
+
+        <span class="c1"># Extract resolutions</span>
+        <span class="n">resolutions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">channelCount</span><span class="p">):</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="mi">8</span>
+            <span class="n">restuple</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;d&#39;</span><span class="p">,</span> <span class="n">rawdata</span><span class="p">[</span><span class="n">index</span><span class="p">:</span><span class="n">index</span> <span class="o">+</span> <span class="mi">8</span><span class="p">])</span>
+            <span class="n">resolutions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">restuple</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># Extract channel names</span>
+        <span class="n">channelNames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_string</span><span class="p">(</span><span class="n">rawdata</span><span class="p">[</span><span class="mi">12</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">channelCount</span><span class="p">:])</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">channelCount</span><span class="p">,</span> <span class="n">samplingInterval</span><span class="p">,</span> <span class="n">resolutions</span><span class="p">,</span> <span class="n">channelNames</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_extract_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rawdata</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;function for extracting data from message body&quot;&quot;&quot;</span>
+        <span class="c1"># Extract numerical data</span>
+        <span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">markerCount</span><span class="p">)</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;LLL&#39;</span><span class="p">,</span> <span class="n">rawdata</span><span class="p">[:</span><span class="mi">12</span><span class="p">])</span>
+
+        <span class="c1"># Extract eeg data as array of floats</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">points</span><span class="p">):</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">chan</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channels</span><span class="p">)):</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channels</span><span class="p">)</span> <span class="o">*</span> <span class="n">point</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">chan</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;f&#39;</span><span class="p">,</span> <span class="n">rawdata</span><span class="p">[</span><span class="n">index</span><span class="p">:</span><span class="n">index</span> <span class="o">+</span> <span class="mi">4</span><span class="p">])</span>
+                <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+        <span class="c1"># Extract markers</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">points</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channels</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">markerCount</span><span class="p">):</span>
+            <span class="n">markersize</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;L&#39;</span><span class="p">,</span> <span class="n">rawdata</span><span class="p">[</span><span class="n">index</span><span class="p">:</span><span class="n">index</span> <span class="o">+</span> <span class="mi">4</span><span class="p">])</span>
+            <span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">points2</span><span class="p">,</span> <span class="n">channel</span><span class="p">)</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&lt;LLl&#39;</span><span class="p">,</span> <span class="n">rawdata</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">4</span><span class="p">:</span><span class="n">index</span> <span class="o">+</span> <span class="mi">16</span><span class="p">])</span>
+            <span class="n">typedesc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_string</span><span class="p">(</span><span class="n">rawdata</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">16</span><span class="p">:</span><span class="n">index</span> <span class="o">+</span> <span class="n">markersize</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+            <span class="n">markers</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;position&#39;</span><span class="p">:</span> <span class="n">position</span><span class="p">,</span> <span class="s1">&#39;points&#39;</span><span class="p">:</span> <span class="n">points2</span><span class="p">,</span> <span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="n">typedesc</span><span class="p">})</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">+</span> <span class="n">markersize</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">markers</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, LaSEEB, S.Legeay.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'0.0.3',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE: 'true'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="../../../_static/language_data.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

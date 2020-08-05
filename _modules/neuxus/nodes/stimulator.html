@@ -1,0 +1,641 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>neuxus.nodes.stimulator &mdash; NeuXus 0.0.3 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+        <link rel="search" title="Search" href="../../../search.html"/>
+    <link rel="top" title="NeuXus 0.0.3 documentation" href="../../../index.html"/>
+        <link rel="up" title="Module code" href="../../index.html"/> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> NeuXus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tuto1.html">Create a pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tuto2.html">Create your own node</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cite_us.html">Cite us</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">NeuXus</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>neuxus.nodes.stimulator</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for neuxus.nodes.stimulator</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+<span class="kn">import</span> <span class="nn">random</span> <span class="k">as</span> <span class="nn">rd</span>
+<span class="kn">from</span> <span class="nn">tkinter</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">xml.dom</span> <span class="kn">import</span> <span class="n">minidom</span>
+<span class="kn">from</span> <span class="nn">xml.parsers.expat</span> <span class="kn">import</span> <span class="n">ExpatError</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">from</span> <span class="nn">tkinter.ttk</span> <span class="kn">import</span> <span class="n">Progressbar</span>
+
+<span class="kn">from</span> <span class="nn">neuxus.node</span> <span class="kn">import</span> <span class="n">Node</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Author: S.LEGEAY, intern at LaSEEB</span>
+<span class="sd">e-mail: legeay.simon.sup@gmail.com</span>
+
+
+<span class="sd">Create a Marker stream of a scenario described in a xml file specified in parser</span>
+<span class="sd">Launch: python stimulator.py config.xml</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">VALID_TYPE</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;float32&#39;</span><span class="p">,</span> <span class="s1">&#39;double64&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;int32&#39;</span><span class="p">,</span> <span class="s1">&#39;int16&#39;</span><span class="p">,</span> <span class="s1">&#39;int8&#39;</span><span class="p">,</span> <span class="s1">&#39;int64&#39;</span><span class="p">]</span>
+
+
+<span class="k">class</span> <span class="nc">ConfigFileNotInAccordance</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Exception raised when the config file is not in accordance with rules&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;An error occured when loading the config file:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="n">message</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span>
+
+
+<span class="k">class</span> <span class="nc">FileNotFound</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Exception raised when the specified file does not exist&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">file</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="si">}</span><span class="s1"> not found&#39;</span>
+
+
+<span class="k">class</span> <span class="nc">InvalidXml</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Exception raised when the config file cannot be opened&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">err</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">err</span> <span class="o">=</span> <span class="n">err</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="si">}</span><span class="s1"> is not a readable xml, please check the file (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">err</span><span class="si">}</span><span class="s1">)&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">get_section</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">section</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Function used for reading xml file, extract sections such as init class&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">section</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="n">section</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ConfigFileNotInAccordance</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;No </span><span class="si">{</span><span class="n">section</span><span class="si">}</span><span class="s1"> implemented in config file, please add subsection </span><span class="se">\&#39;</span><span class="si">{</span><span class="n">section</span><span class="si">}</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">section</span>
+
+
+<span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">section</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Function used for reading xml file, it extracts data from step&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ConfigFileNotInAccordance</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;No </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s1"> implemented in a step of </span><span class="si">{</span><span class="n">section</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">convert</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">convert</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">firstChild</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ConfigFileNotInAccordance</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">firstChild</span><span class="o">.</span><span class="n">data</span><span class="si">}</span><span class="s1"> in subsection </span><span class="se">\&#39;</span><span class="si">{</span><span class="n">section</span><span class="si">}</span><span class="se">\&#39;</span><span class="s1"> is not a valid </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s1"> value&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">item</span><span class="o">.</span><span class="n">firstChild</span><span class="o">.</span><span class="n">data</span>
+
+
+<span class="k">def</span> <span class="nf">extract_classes</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">convert</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;get the different classes from the file&quot;&quot;&quot;</span>
+    <span class="n">classes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">section</span> <span class="o">=</span> <span class="n">get_section</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;classes&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">class_</span> <span class="ow">in</span> <span class="n">section</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">class_</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;classes&#39;</span><span class="p">,</span> <span class="n">convert</span><span class="p">)</span>
+        <span class="n">classes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">classes</span>
+
+
+<span class="k">def</span> <span class="nf">extract_init</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">convert</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;get the init of scenario from the file&quot;&quot;&quot;</span>
+    <span class="n">init</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">section</span> <span class="o">=</span> <span class="n">get_section</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;init&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">section</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;step&#39;</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;init&#39;</span><span class="p">,</span> <span class="n">convert</span><span class="p">)</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">,</span> <span class="s1">&#39;init&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+        <span class="n">init</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Marker</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">duration</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">init</span>
+
+
+<span class="k">def</span> <span class="nf">extract_loop</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">convert</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;get the loop of the scenario from the file&quot;&quot;&quot;</span>
+    <span class="n">loop</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">section</span> <span class="o">=</span> <span class="n">get_section</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;loop&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">section</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;step&#39;</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;loop&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;Class&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;duration&#39;</span><span class="p">):</span>
+                <span class="n">duration</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">,</span> <span class="s1">&#39;loop&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+                <span class="n">loop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MarkerClass</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">duration</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">min_duration</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;min_duration&#39;</span><span class="p">,</span> <span class="s1">&#39;loop&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+                <span class="n">max_duration</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;max_duration&#39;</span><span class="p">,</span> <span class="s1">&#39;loop&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+                <span class="n">loop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MarkerClass</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span>
+                                        <span class="n">min_duration</span><span class="p">,</span> <span class="n">max_duration</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">convert</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;duration&#39;</span><span class="p">):</span>
+                <span class="n">duration</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">,</span> <span class="s1">&#39;loop&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+                <span class="n">loop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Marker</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">duration</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">min_duration</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;min_duration&#39;</span><span class="p">,</span> <span class="s1">&#39;loop&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+                <span class="n">max_duration</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;max_duration&#39;</span><span class="p">,</span> <span class="s1">&#39;loop&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+                <span class="n">loop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Marker</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span>
+                                   <span class="n">min_duration</span><span class="p">,</span> <span class="n">max_duration</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">loop</span>
+
+
+<span class="k">def</span> <span class="nf">extract_intersession</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">convert</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;get the intersession of the scenario from the file&quot;&quot;&quot;</span>
+    <span class="n">intersession</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">section</span> <span class="o">=</span> <span class="n">get_section</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;intersession&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">section</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;step&#39;</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;intersession&#39;</span><span class="p">,</span> <span class="n">convert</span><span class="p">)</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">,</span> <span class="s1">&#39;intersession&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+        <span class="n">intersession</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Marker</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">duration</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">intersession</span>
+
+
+<span class="k">def</span> <span class="nf">extract_end</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">convert</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;get the end of the scenario from the file&quot;&quot;&quot;</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">section</span> <span class="o">=</span> <span class="n">get_section</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;end&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">section</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;step&#39;</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;end&#39;</span><span class="p">,</span> <span class="n">convert</span><span class="p">)</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">,</span> <span class="s1">&#39;end&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+        <span class="n">end</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Marker</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">duration</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">end</span>
+
+
+<span class="k">def</span> <span class="nf">get_type_function</span><span class="p">(</span><span class="n">type_</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;According specified type, return the function that convert to the type specified&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;float32&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+    <span class="k">elif</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;string&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span>
+    <span class="k">elif</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;int32&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span>
+    <span class="k">elif</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;int16&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">int16</span>
+    <span class="k">elif</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;int8&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">int8</span>
+    <span class="k">elif</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;int64&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span>
+
+
+<span class="k">def</span> <span class="nf">booleen</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="s1">&#39;True&#39;</span> <span class="ow">or</span> <span class="n">x</span> <span class="o">==</span> <span class="s1">&#39;1&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="n">x</span> <span class="o">==</span> <span class="s1">&#39;False&#39;</span> <span class="ow">or</span> <span class="n">x</span> <span class="o">==</span> <span class="s1">&#39;0&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span>
+
+
+<span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;object describing the config file&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Config</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="n">minidom</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">FileNotFound</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">ExpatError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidXml</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">number_of_trials</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;number_of_trials&#39;</span><span class="p">,</span> <span class="s1">&#39;info&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;marker_type&#39;</span><span class="p">,</span> <span class="s1">&#39;info&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">VALID_TYPE</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ConfigFileNotInAccordance</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s1"> is not an accepted type&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_function</span> <span class="o">=</span> <span class="n">get_type_function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;info&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">author</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;author&#39;</span><span class="p">,</span> <span class="s1">&#39;info&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;session&#39;</span><span class="p">,</span> <span class="s1">&#39;info&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;random&#39;</span><span class="p">,</span> <span class="s1">&#39;info&#39;</span><span class="p">,</span> <span class="n">booleen</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">classes</span> <span class="o">=</span> <span class="n">extract_classes</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_function</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init</span> <span class="o">=</span> <span class="n">extract_init</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_function</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span> <span class="o">=</span> <span class="n">extract_loop</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_function</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intersession</span> <span class="o">=</span> <span class="n">extract_intersession</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_function</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_end</span> <span class="o">=</span> <span class="n">extract_end</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_function</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">create_a_new_scenario</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a scenario of length number_of_trials * nb_of_classes</span>
+<span class="sd">        with number_of_trials elements by class&quot;&quot;&quot;</span>
+
+        <span class="n">scenario</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_init</span><span class="p">:</span>
+            <span class="n">scenario</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">marker</span><span class="o">.</span><span class="n">get_name</span><span class="p">(),</span> <span class="n">t</span><span class="p">])</span>
+            <span class="n">t</span> <span class="o">+=</span> <span class="n">marker</span><span class="o">.</span><span class="n">get_duration</span><span class="p">()</span>
+
+        <span class="c1"># send loop</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">random</span><span class="p">:</span>
+            <span class="n">sequence</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_trials</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">session</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">:</span>
+                    <span class="n">a</span> <span class="o">=</span> <span class="n">rd</span><span class="o">.</span><span class="n">randrange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_trials</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+                    <span class="n">b</span> <span class="o">=</span> <span class="n">rd</span><span class="o">.</span><span class="n">randrange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_trials</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+                    <span class="n">sequence</span><span class="p">[</span><span class="n">a</span><span class="p">],</span> <span class="n">sequence</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">sequence</span><span class="p">[</span><span class="n">b</span><span class="p">],</span> <span class="n">sequence</span><span class="p">[</span><span class="n">a</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">class_</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="p">:</span>
+                        <span class="n">scenario</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">marker</span><span class="o">.</span><span class="n">get_name</span><span class="p">(</span><span class="n">class_</span><span class="p">),</span> <span class="n">t</span><span class="p">])</span>
+                        <span class="n">t</span> <span class="o">+=</span> <span class="n">marker</span><span class="o">.</span><span class="n">get_duration</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">session</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersession</span><span class="p">:</span>
+                        <span class="n">scenario</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">marker</span><span class="o">.</span><span class="n">get_name</span><span class="p">(</span><span class="n">class_</span><span class="p">),</span> <span class="n">t</span><span class="p">])</span>
+                        <span class="n">t</span> <span class="o">+=</span> <span class="n">marker</span><span class="o">.</span><span class="n">get_duration</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">):</span>
+                <span class="n">sequence</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="n">i</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">)]]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_trials</span>
+                <span class="k">for</span> <span class="n">class_</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="p">:</span>
+                        <span class="n">scenario</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">marker</span><span class="o">.</span><span class="n">get_name</span><span class="p">(</span><span class="n">class_</span><span class="p">),</span> <span class="n">t</span><span class="p">])</span>
+                        <span class="n">t</span> <span class="o">+=</span> <span class="n">marker</span><span class="o">.</span><span class="n">get_duration</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intersession</span><span class="p">:</span>
+                        <span class="n">scenario</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">marker</span><span class="o">.</span><span class="n">get_name</span><span class="p">(</span><span class="n">class_</span><span class="p">),</span> <span class="n">t</span><span class="p">])</span>
+                        <span class="n">t</span> <span class="o">+=</span> <span class="n">marker</span><span class="o">.</span><span class="n">get_duration</span><span class="p">()</span>
+
+        <span class="c1"># send end</span>
+        <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_end</span><span class="p">:</span>
+            <span class="n">scenario</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">marker</span><span class="o">.</span><span class="n">get_name</span><span class="p">(),</span> <span class="n">t</span><span class="p">])</span>
+            <span class="n">t</span> <span class="o">+=</span> <span class="n">marker</span><span class="o">.</span><span class="n">get_duration</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">scenario</span>
+
+
+<span class="k">class</span> <span class="nc">Marker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Object describing a marker&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">min_duration</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_duration</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Marker</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">duration</span> <span class="o">=</span> <span class="n">duration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_duration</span> <span class="o">=</span> <span class="n">min_duration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_duration</span> <span class="o">=</span> <span class="n">max_duration</span>
+
+    <span class="k">def</span> <span class="nf">get_duration</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">rd</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_duration</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_duration</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+
+<span class="k">class</span> <span class="nc">MarkerClass</span><span class="p">(</span><span class="n">Marker</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">min_duration</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_duration</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">min_duration</span><span class="p">,</span> <span class="n">max_duration</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">class_</span>
+
+
+<span class="k">class</span> <span class="nc">CustomCanvas</span><span class="p">(</span><span class="n">Canvas</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Custom Canvas fitting with graz visualization with function to update the content</span>
+<span class="sd">    according the windows size, and plot functions&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span> <span class="o">=</span> <span class="n">Progressbar</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mi">425</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="n">HORIZONTAL</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;determinate&#39;</span><span class="p">)</span>
+        <span class="c1">#self.bind(&quot;&lt;Configure&gt;&quot;, self.on_resize)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">TOP</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="n">NO</span><span class="p">)</span>
+
+        <span class="n">Canvas</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">fill</span><span class="o">=</span><span class="n">BOTH</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_i</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1">#self.height = self.winfo_reqheight()</span>
+        <span class="c1">#self.width = self.winfo_reqwidth()</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">marker</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="p">[</span><span class="n">marker</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_i</span> <span class="o">*</span> <span class="mi">100</span> <span class="o">/</span> <span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">update_idletasks</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_text</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">W</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_last</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">font</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;Helvetica&#39;</span><span class="p">,</span> <span class="s1">&#39;12&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_text</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">W</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_last</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">font</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;Helvetica&#39;</span><span class="p">,</span> <span class="s1">&#39;12&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_text</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">W</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_last</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">font</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;Helvetica&#39;</span><span class="p">,</span> <span class="s1">&#39;12&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_text</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">W</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_last</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">font</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;Helvetica&#39;</span><span class="p">,</span> <span class="s1">&#39;12&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_text</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">104</span><span class="p">,</span> <span class="n">anchor</span><span class="o">=</span><span class="n">W</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_last</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">font</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;Helvetica&#39;</span><span class="p">,</span> <span class="s1">&#39;18&#39;</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">on_resize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="c1"># determine the ratio of old width/height to new width/height</span>
+        <span class="n">wscale</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">width</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span>
+        <span class="n">hscale</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">height</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">width</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">height</span>
+        <span class="c1"># resize the canvas</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">)</span>
+        <span class="c1"># rescale all the objects tagged with the &quot;all&quot; tag</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wscale</span><span class="p">,</span> <span class="n">hscale</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ProcessStim</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Create a new window containing the Graz visualization</span>
+<span class="sd">    Launched in a subprocess&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max</span> <span class="o">=</span> <span class="n">end</span>
+
+    <span class="k">def</span> <span class="nf">terminate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">destroy</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">call_back</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span><span class="o">.</span><span class="n">poll</span><span class="p">():</span>
+            <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">sample</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">myCanvas</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">after</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_back</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipe</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span> <span class="o">=</span> <span class="n">pipe</span>
+        <span class="c1"># initialise a window.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">Tk</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">config</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Stimulator&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="s2">&quot;500x150&quot;</span><span class="p">)</span>
+
+        <span class="c1"># create a Frame</span>
+        <span class="n">myframe</span> <span class="o">=</span> <span class="n">Frame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">)</span>
+        <span class="n">myframe</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">fill</span><span class="o">=</span><span class="n">BOTH</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="n">NO</span><span class="p">)</span>
+
+        <span class="c1"># add a canvas</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">myCanvas</span> <span class="o">=</span> <span class="n">CustomCanvas</span><span class="p">(</span><span class="n">myframe</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">425</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+                                     <span class="n">highlightthickness</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">myCanvas</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">fill</span><span class="o">=</span><span class="n">BOTH</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="n">NO</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">after</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_back</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="Stimulator"><a class="viewcode-back" href="../../../stimulator.html#neuxus.nodes.stimulator.Stimulator">[docs]</a><span class="k">class</span> <span class="nc">Stimulator</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate a marker stream from a config file</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      - output (Port): Output port</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      - file (str): Path to the xml config file</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        Stimulator(&#39;config_ov.xml)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
+        <span class="n">Node</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">Config</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">ConfigFileNotInAccordance</span><span class="p">,</span> <span class="n">FileNotFound</span><span class="p">,</span> <span class="n">InvalidXml</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="n">exit</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">create_a_new_scenario</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;marker&#39;</span><span class="p">,</span>
+            <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;marker&#39;</span><span class="p">],</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="c1"># create the plot process</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_pipe</span><span class="p">,</span> <span class="n">plotter_pipe</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pipe</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotter</span> <span class="o">=</span> <span class="n">ProcessStim</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_process</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span>
+            <span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">plotter</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">plotter_pipe</span><span class="p">,),</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_process</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="n">Node</span><span class="o">.</span><span class="n">log_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="n">file</span><span class="p">,</span>
+            <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s1">&#39;author&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">author</span><span class="p">,</span>
+            <span class="s1">&#39;session&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">session</span><span class="p">,</span>
+            <span class="s1">&#39;nb of trials&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">number_of_trials</span><span class="p">,</span>
+            <span class="s1">&#39;classes&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">classes</span><span class="p">,</span>
+            <span class="s1">&#39;random&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">random</span><span class="p">,</span>
+            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">type</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start_time</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_time</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">markers</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span><span class="p">:</span>
+                <span class="n">markers</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">markers</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_time</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span> <span class="ow">and</span> <span class="n">t</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="s1">&#39;marker&#39;</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">plot_pipe</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">BrokenPipeError</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scenario</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+    <span class="k">def</span> <span class="nf">terminate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot_pipe</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="kc">None</span><span class="p">,)</span>
+        <span class="k">except</span> <span class="ne">BrokenPipeError</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, LaSEEB, S.Legeay.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'0.0.3',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE: 'true'
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="../../../_static/language_data.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
