@@ -1,12 +1,19 @@
 # NeuXus
-Build flexible pipeline for real-time processing
+
+NeuXus is a modular software written in Python that allows to easily create and execute pipelines in real time. NeuXus is specifically designed for BCI real-time processing and classification.
+
+It offers a lot of possibilities, many basic functions are already implemented so that the first pipelines can be quickly created. For more specific functions, users can develop and use their own functions.
 
 
 ## Installation
 
 ### Basic use
 
-To Do uploading on PyPi
+NeuXus requires Python 3.7+, verify your Python version with:
+```
+python --version
+```
+Install NeuXus with:
 ```
 pip install neuxus
 ```
@@ -25,31 +32,4 @@ neuxus basics/generate_send.py -e
 neuxus path_to_my_pipeline.py
 ```
 
-## Customize your own nodes
-
-see template
-TODO
-
-## For developers
-
-Clone from source:
-
-```
-git clone https://github.com/LaSEEB/NeuXus.git
-```
-
-Install dev-requirements
-ToDo
-
-Create the tar.gz file and install it on your computer:
-```
-setup.py sdist
-pip install nexus-xx.xx.xx.tar.gz
-```
-
-### Tests
-
-Launch tests with:
-```
-python -m unittest discover
-```
+For more information, read the [Documentation](https://laseeb.github.io/NeuXus/index.html)
