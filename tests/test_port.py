@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 
-from modules.port.port import Port
+from neuxus.chunks import Port
 
 
 """

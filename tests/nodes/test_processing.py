@@ -1,5 +1,4 @@
 import sys
-import os
 
 import unittest
 
@@ -8,12 +7,12 @@ sys.path.append('tests/nodes')
 
 from utils import (INDEX, COLUMN, simulate_loop_and_verify)
 from chunks import Port
-from nodes.epoching import (TimeBasedEpoching, MarkerBasedSeparation, StimulationBasedEpoching)
+from nodes.processing import (HilbertTransform, PsdWelch, Fft)
 
 
-class TestEpoching(unittest.TestCase):
+class TestProcessing(unittest.TestCase):
 
-    def test_TimeBasedEpoching(self):
+    def test_HilbertTransform(self):
         # create a Port and a Node
         port = Port()
         port.set_parameters(
@@ -21,12 +20,12 @@ class TestEpoching(unittest.TestCase):
             channels=COLUMN,
             sampling_frequency=250,
             meta={})
-        node = TimeBasedEpoching(port, 1, 0.5)
+        node = HilbertTransform(port)
 
         # simulate NeuXus loops
         simulate_loop_and_verify(port, node, self)
 
-    def test_MarkerBasedSeparation(self):
+    def test_PsdWelch(self):
         # create a Port and a Node
         port = Port()
         port.set_parameters(
@@ -34,19 +33,12 @@ class TestEpoching(unittest.TestCase):
             channels=COLUMN,
             sampling_frequency=250,
             meta={})
-        marker_port = Port()
-        marker_port.set_parameters(
-            data_type='marker',
-            channels=['marker'],
-            sampling_frequency=0,
-            meta={})
-        node = MarkerBasedSeparation(port, marker_port)
-        marker_port.set([[400]], [0.4])
+        node = PsdWelch(port)
 
         # simulate NeuXus loops
         simulate_loop_and_verify(port, node, self)
 
-    def test_StimulationBasedEpoching(self):
+    def test_Fft(self):
         # create a Port and a Node
         port = Port()
         port.set_parameters(
@@ -54,18 +46,7 @@ class TestEpoching(unittest.TestCase):
             channels=COLUMN,
             sampling_frequency=250,
             meta={})
-        marker_port = Port()
-        marker_port.set_parameters(
-            data_type='marker',
-            channels=['marker'],
-            sampling_frequency=0,
-            meta={})
-        node = StimulationBasedEpoching(port, marker_port, 400, 0.125, 2)
-        marker_port.set([[400]], [0.4])
+        node = Fft(port)
 
         # simulate NeuXus loops
         simulate_loop_and_verify(port, node, self)
-
-
-if __name__ == '__main__':
-    unittest.main()

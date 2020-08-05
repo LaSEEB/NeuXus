@@ -1,5 +1,4 @@
 import sys
-import os
 
 import unittest
 
@@ -8,12 +7,12 @@ sys.path.append('tests/nodes')
 
 from utils import (INDEX, COLUMN, simulate_loop_and_verify)
 from chunks import Port
-from nodes.epoching import (TimeBasedEpoching, MarkerBasedSeparation, StimulationBasedEpoching)
+from nodes.select import (ChannelSelector, SpatialFilter, CommonAverageReference, ReferenceChannel)
 
 
-class TestEpoching(unittest.TestCase):
+class TestSelect(unittest.TestCase):
 
-    def test_TimeBasedEpoching(self):
+    def test_ChannelSelector(self):
         # create a Port and a Node
         port = Port()
         port.set_parameters(
@@ -21,12 +20,17 @@ class TestEpoching(unittest.TestCase):
             channels=COLUMN,
             sampling_frequency=250,
             meta={})
-        node = TimeBasedEpoching(port, 1, 0.5)
+        node = ChannelSelector(port, 'index', [1, 2])
 
         # simulate NeuXus loops
         simulate_loop_and_verify(port, node, self)
 
-    def test_MarkerBasedSeparation(self):
+    def test_SpatialFilter(self):
+
+        matrix = {
+            'OC2': [4, 0, -1e-2, 0],
+            'OC3': [0, -1, 2, 4]
+        }
         # create a Port and a Node
         port = Port()
         port.set_parameters(
@@ -34,19 +38,12 @@ class TestEpoching(unittest.TestCase):
             channels=COLUMN,
             sampling_frequency=250,
             meta={})
-        marker_port = Port()
-        marker_port.set_parameters(
-            data_type='marker',
-            channels=['marker'],
-            sampling_frequency=0,
-            meta={})
-        node = MarkerBasedSeparation(port, marker_port)
-        marker_port.set([[400]], [0.4])
+        node = SpatialFilter(port, matrix)
 
         # simulate NeuXus loops
         simulate_loop_and_verify(port, node, self)
 
-    def test_StimulationBasedEpoching(self):
+    def test_CommonAverageReference(self):
         # create a Port and a Node
         port = Port()
         port.set_parameters(
@@ -54,14 +51,20 @@ class TestEpoching(unittest.TestCase):
             channels=COLUMN,
             sampling_frequency=250,
             meta={})
-        marker_port = Port()
-        marker_port.set_parameters(
-            data_type='marker',
-            channels=['marker'],
-            sampling_frequency=0,
+        node = CommonAverageReference(port)
+
+        # simulate NeuXus loops
+        simulate_loop_and_verify(port, node, self)
+
+    def test_ReferenceChannel(self):
+        # create a Port and a Node
+        port = Port()
+        port.set_parameters(
+            data_type='signal',
+            channels=COLUMN,
+            sampling_frequency=250,
             meta={})
-        node = StimulationBasedEpoching(port, marker_port, 400, 0.125, 2)
-        marker_port.set([[400]], [0.4])
+        node = ReferenceChannel(port, 'index', 1)
 
         # simulate NeuXus loops
         simulate_loop_and_verify(port, node, self)

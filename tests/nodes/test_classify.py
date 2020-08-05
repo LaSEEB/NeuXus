@@ -7,20 +7,25 @@ sys.path.append('tests/nodes')
 
 from utils import (INDEX, COLUMN, simulate_loop_and_verify)
 from chunks import Port
-from nodes.function import ApplyFunction
+from nodes.classify import Classify
 
 
-class TestFunction(unittest.TestCase):
+class TestClassify(unittest.TestCase):
 
-    def test_apply_function(self):
+    def test_Classify(self):
+        col = ['a', 'b']
         # create a Port and a Node
         port = Port()
         port.set_parameters(
             data_type='signal',
-            channels=COLUMN,
+            channels=col,
             sampling_frequency=250,
             meta={})
-        node = ApplyFunction(port, lambda x: x**2)
+        node = Classify(port, 'tests/nodes/data/classifier.sav', 'class')
 
         # simulate NeuXus loops
-        simulate_loop_and_verify(port, node, self)
+        simulate_loop_and_verify(port, node, self, column=col)
+
+
+if __name__ == '__main__':
+    unittest.main()
