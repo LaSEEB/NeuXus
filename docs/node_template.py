@@ -77,6 +77,7 @@ class MyNewNode(Node):
             # 'signal': a DataFrame containing one chunk of the signal
             # 'epoch': a DataFrame containig one epoch
             # 'spectrum': a special DataFrame containing the signal
+            # 'vector': a DataFrame containig one vector
 
             # to see more particularly what a chunk looks like add (for dev:
             print(chunk)

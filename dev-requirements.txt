@@ -1,0 +1,5 @@
+# requirements for dev and tests
+
+Sphinx==3.1.2
+twine==3.2.0
+rtcat-sphinx-theme==0.1.1

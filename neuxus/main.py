@@ -9,7 +9,7 @@ from neuxus.pipeline import run
 
 def main():
     parser = argparse.ArgumentParser(
-        description="# Sygnal main script")
+        description="# NeuXus main script")
     parser.add_argument(
         "pipeline",
         help="Path to the pipeline script file")
@@ -28,7 +28,7 @@ def main():
         "-e",
         "--example",
         action="store_true",
-        help="To run an example from sygnal")
+        help="To run an example from NeuXus")
     args = parser.parse_args()
 
     numeric_level = getattr(logging, args.loglevel.upper(), None)

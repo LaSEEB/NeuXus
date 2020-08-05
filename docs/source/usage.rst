@@ -29,8 +29,7 @@ Press ``Esc`` to quit the software and stop the running.
 Run your own pipeline
 ---------------------
 
-Refer to to learn how to create a pipeline
-Launch your pipeline with:
+Refer to :ref:`tutorial1` and then launch your pipeline with:
 ::
 
    $ neuxus my_pipeline.py
@@ -38,16 +37,32 @@ Launch your pipeline with:
 Command line options
 --------------------
 
+::
+
+   usage: neuxus [-h] [-f] [-l {DEBUG,INFO}] [-e] pipeline
+
+   # NeuXus main script
+
+   positional arguments:
+     pipeline              Path to the pipeline script file
+
+   optional arguments:
+     -h, --help            show this help message and exit
+     -f, --file            Store logs in a log file, default is on cmd window
+     -l {DEBUG,INFO}, --loglevel {DEBUG,INFO}
+                           Specify the log level, default is INFO
+     -e, --example         To run an example from NeuXus
+
 Change the log level with (default level is INFO):
 ::
 
    $ neuxus my_pipeline.py -l DEBUG
 
-This will display what data enters each Node
+This will display what data enters each Node.
 
 To save logs in a file, run:
 ::
 
    $ neuxus my_pipeline.py -l DEBUG -f
 
-The file is saved in the same directory you run NeuXus
+The file is saved in the same directory you run NeuXus.
