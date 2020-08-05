@@ -35,6 +35,7 @@ Type of ports are:
    * ``'epoch'``: 1 iteration = 1 epoch
    * ``'marker'``: 1 iteration = 1 marker
    * ``'spectrum'``: 1 iteration = 1 spectrum computed at one timestamp
+   * ``'vector'``: 1 iteration = 1 vector
 
 A Node template
 ---------------

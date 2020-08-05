@@ -184,24 +184,38 @@
 </div>
 <div class="section" id="run-your-own-pipeline">
 <h2>Run your own pipeline<a class="headerlink" href="#run-your-own-pipeline" title="Permalink to this headline">¶</a></h2>
-<p>Refer to to learn how to create a pipeline
-Launch your pipeline with:</p>
+<p>Refer to <a class="reference internal" href="tuto1.html#tutorial1"><span class="std std-ref">Create a pipeline</span></a> and then launch your pipeline with:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ neuxus my_pipeline.py
 </pre></div>
 </div>
 </div>
 <div class="section" id="command-line-options">
 <h2>Command line options<a class="headerlink" href="#command-line-options" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">neuxus</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">f</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">l</span> <span class="p">{</span><span class="n">DEBUG</span><span class="p">,</span><span class="n">INFO</span><span class="p">}]</span> <span class="p">[</span><span class="o">-</span><span class="n">e</span><span class="p">]</span> <span class="n">pipeline</span>
+
+<span class="c1"># NeuXus main script</span>
+
+<span class="n">positional</span> <span class="n">arguments</span><span class="p">:</span>
+  <span class="n">pipeline</span>              <span class="n">Path</span> <span class="n">to</span> <span class="n">the</span> <span class="n">pipeline</span> <span class="n">script</span> <span class="n">file</span>
+
+<span class="n">optional</span> <span class="n">arguments</span><span class="p">:</span>
+  <span class="o">-</span><span class="n">h</span><span class="p">,</span> <span class="o">--</span><span class="n">help</span>            <span class="n">show</span> <span class="n">this</span> <span class="n">help</span> <span class="n">message</span> <span class="ow">and</span> <span class="n">exit</span>
+  <span class="o">-</span><span class="n">f</span><span class="p">,</span> <span class="o">--</span><span class="n">file</span>            <span class="n">Store</span> <span class="n">logs</span> <span class="ow">in</span> <span class="n">a</span> <span class="n">log</span> <span class="n">file</span><span class="p">,</span> <span class="n">default</span> <span class="ow">is</span> <span class="n">on</span> <span class="n">cmd</span> <span class="n">window</span>
+  <span class="o">-</span><span class="n">l</span> <span class="p">{</span><span class="n">DEBUG</span><span class="p">,</span><span class="n">INFO</span><span class="p">},</span> <span class="o">--</span><span class="n">loglevel</span> <span class="p">{</span><span class="n">DEBUG</span><span class="p">,</span><span class="n">INFO</span><span class="p">}</span>
+                        <span class="n">Specify</span> <span class="n">the</span> <span class="n">log</span> <span class="n">level</span><span class="p">,</span> <span class="n">default</span> <span class="ow">is</span> <span class="n">INFO</span>
+  <span class="o">-</span><span class="n">e</span><span class="p">,</span> <span class="o">--</span><span class="n">example</span>         <span class="n">To</span> <span class="n">run</span> <span class="n">an</span> <span class="n">example</span> <span class="kn">from</span> <span class="nn">NeuXus</span>
+</pre></div>
+</div>
 <p>Change the log level with (default level is INFO):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ neuxus my_pipeline.py -l DEBUG
 </pre></div>
 </div>
-<p>This will display what data enters each Node</p>
+<p>This will display what data enters each Node.</p>
 <p>To save logs in a file, run:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ neuxus my_pipeline.py -l DEBUG -f
 </pre></div>
 </div>
-<p>The file is saved in the same directory you run NeuXus</p>
+<p>The file is saved in the same directory you run NeuXus.</p>
 </div>
 </div>
 

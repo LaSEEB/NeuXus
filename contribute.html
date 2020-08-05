@@ -90,7 +90,11 @@
 <li class="toctree-l1"><a class="reference internal" href="tuto2.html">Create your own node</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Contribute</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#for-developers">For developers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#for-administrators">For administrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#for-administrators">For administrators</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#update-the-package">Update the package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#update-the-doc">Update the doc</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="cite_us.html">Cite us</a></li>
@@ -178,17 +182,49 @@ $ pip install nexus-xx.xx.xx.tar.gz
 </div>
 <div class="section" id="for-administrators">
 <h2>For administrators<a class="headerlink" href="#for-administrators" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="update-the-package">
+<h3>Update the package<a class="headerlink" href="#update-the-package" title="Permalink to this headline">¶</a></h3>
 <p>To update the Pypi on-line package, run:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python setup.py sdist bdist_wheel
 $ twine upload dist/*
 </pre></div>
 </div>
-<p>To compile the doc:</p>
+</div>
+<div class="section" id="update-the-doc">
+<h3>Update the doc<a class="headerlink" href="#update-the-doc" title="Permalink to this headline">¶</a></h3>
+<p>Set up the doc-repo:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mkdir NeuXus-doc
+$ cd NeuXus-doc
+$ git clone https://github.com/LaSEEB/NeuXus.git html
+$ cd html
+$ git checkout -b gh-pages remotes/origin/gh-pages
+</pre></div>
+</div>
+<p>Your repos should look like:</p>
+<div class="line-block">
+<div class="line">NeuXus</div>
+<div class="line">├── docs</div>
+<div class="line">├── examples</div>
+<div class="line">├── neuxus</div>
+<div class="line">├── tests</div>
+<div class="line">└── data</div>
+<div class="line">NeuXus-doc</div>
+<div class="line">└── html</div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<p>To compile the doc, run from the original repo:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd docs
 $ make html
 </pre></div>
 </div>
+<p>This will update the local documentation.</p>
 <p>To update online documentation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git commit -a -m &quot;rebuilt docs&quot;
+$ git push origin gh-pages
+</pre></div>
+</div>
+</div>
 </div>
 </div>
 

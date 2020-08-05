@@ -35,23 +35,17 @@ Install NeuXus with:
 
    $ pip install neuxus
 
-To run your first pipeline, follow the tutorial :ref:`tuto1`
+To run your first pipeline, follow the tutorial :ref:`tutorial1`.
 
 
-fonctionnement
-==============
+Vocabulary
+==========
 
-NeuXus requires Python 3.7+, verify your Python version with:
-::
+Many Nodes are available to build, please refer to the :ref:`api`.
 
-   $ python --version
-
-Install NeuXus with:
-::
-
-   $ pip install neuxus
-
-To run your first pipeline, follow the tutorial :ref:`tuto1`
+.. image:: image/pipeline.png
+  :width: 700
+  :alt: Alternative text
 
 Indices and tables
 ==================
