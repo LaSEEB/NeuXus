@@ -32,4 +32,18 @@ neuxus basics/generate_send.py -e
 neuxus path_to_my_pipeline.py
 ```
 
-For more information, read the [Documentation](https://laseeb.github.io/NeuXus/index.html)
+For more information, read the [Documentation](https://laseeb.github.io/NeuXus/index.html) or the published [paper](https://arxiv.org/abs/2012.12794)
+
+
+## Citation
+### When using for your research, please cite:
+```
+@misc{vourvopoulos2020neuxus,
+      title={NeuXus: A Biosignal Processing and Classification Pipeline for Real-Time Brain-Computer Interaction}, 
+      author={Athanasios Vourvopoulos and Simon Legeay and Patricia Figueiredo},
+      year={2020},
+      eprint={2012.12794},
+      archivePrefix={arXiv},
+      primaryClass={cs.HC}
+}
+```
