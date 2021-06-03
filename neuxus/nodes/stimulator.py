@@ -211,6 +211,8 @@ class Config(object):
         t = 0
         for marker in self._init:
             scenario.append([marker.get_name(), t])
+            # Gustavo
+            # print('marker: ', marker)
             t += marker.get_duration()
 
         # send loop
@@ -245,7 +247,9 @@ class Config(object):
         for marker in self._end:
             scenario.append([marker.get_name(), t])
             t += marker.get_duration()
-
+        # /Gustavo:
+        print(t//60)
+        print(t-(t//60)*60)
         return scenario
 
 
@@ -260,8 +264,11 @@ class Marker(object):
         self.max_duration = max_duration
 
     def get_duration(self):
-        if self.duration:
+        # Gustavo:
+        if self.duration is not None:
             return self.duration
+        # if self.duration:         # if 0 gives False, but we might want durations = 0!!
+        #     return self.duration
         else:
             return rd.uniform(self.min_duration, self.max_duration)
 

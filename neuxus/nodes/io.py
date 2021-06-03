@@ -3,12 +3,54 @@ from struct import unpack
 from socket import (AF_INET, SOCK_STREAM, SOCK_DGRAM, socket)
 import logging
 import uuid
+import time as tm
 from time import time
 from pylsl import (StreamInfo, StreamOutlet,
                    StreamInlet, resolve_byprop, pylsl)
 
 from neuxus.node import Node
 from neuxus.chunks import Port
+import serial
+
+class SerialSend(Node):
+    """Send to a serial port.
+    Attributes:
+        i (Port): Default data input, expects DataFrame.
+    Args:
+        com_port (string): Name of the port where to send data.
+        pulsewidth (number): Number of seconds to wait between after reset-send and send
+    """
+
+    def __init__(self, input_port, com_port="COM4", pulsewidth=0.0001):
+        Node.__init__(self, input_port, False)
+        self.pulsewidth = pulsewidth
+        self.com = com_port
+        self.outlet = None
+        self._frequency = self.input.sampling_frequency
+        self.connect()
+
+    def connect(self):
+        '''Create an outlet for streaming data'''
+        if not self.outlet:
+            self.outlet = serial.Serial(self.com)
+
+    def update(self):
+        '''Send data found in input port'''
+        for chunk in self.input:
+            values = chunk.select_dtypes(
+                include=[np.number]).values
+            stamps = chunk.index.values.astype(np.float64)
+            for row, stamp in zip(values, stamps):
+                self.outlet.write([0])
+                self.outlet.write(row.tolist())
+                print(row, stamp)  # Debug
+                while self.outlet.out_waiting > 0:
+                    pass
+                # tm.sleep(self.pulsewidth)
+
+    def terminate(self):
+        if self.outlet:
+            self.outlet.close()
 
 
 class LslSend(Node):
@@ -27,6 +69,12 @@ class LslSend(Node):
     def __init__(self, input_port, name, type="signal", format="double64", uuid_=None):
         Node.__init__(self, input_port, False)
         self._name = name
+
+        if format == "recorder_to_ov":
+            self._recorder_to_ov = True
+            format = 'int32'
+        else:
+            self._recorder_to_ov = False
 
         assert self.input.data_type in ['epoch', 'signal', 'marker']
 
@@ -69,13 +117,29 @@ class LslSend(Node):
             self.outlet = StreamOutlet(info)
 
     def update(self):
+        # If receiving markers from recorder, interpret string (e.g. 'S  7') and send integer (e.g. 7)
         '''Send data found in input port'''
-        for chunk in self.input:
-            values = chunk.select_dtypes(
-                include=[self._dtypes[self._format]]).values
-            stamps = chunk.index.values.astype(np.float64)
-            for row, stamp in zip(values, stamps):
-                self.outlet.push_sample(row, stamp)
+        if self._recorder_to_ov:  # String markers
+            for chunk in self.input:
+                values = chunk.select_dtypes(include=[self._dtypes["string"]]).values
+                stamps = chunk.index.values.astype(np.float64)
+                for row, stamp in zip(values, stamps):
+                    rowstart = row[0][:4]       # To target "Sync On"/"Sync Off" markers
+                    rowend = row[0][-3:]        # To target "Rxxx"/"Sxxx" markers, where xxx is int
+                    if rowend[-1:].isdigit():   # Just check the last char, because spaces before turn this False...
+                        self.outlet.push_sample([int(rowend)], stamp)
+                    elif rowstart == "Sync":
+                        self.outlet.push_sample([13], stamp)
+        # If not, send data / markers as they are
+        else:
+            '''Send data found in input port'''
+            for chunk in self.input:
+                values = chunk.select_dtypes(
+                    include=[self._dtypes[self._format]]).values
+                stamps = chunk.index.values.astype(np.float64)
+                for row, stamp in zip(values, stamps):
+                    self.outlet.push_sample(row, stamp)
+
 
 
 class LslReceive(Node):
@@ -177,7 +241,6 @@ class UdpSend(Node):
       - input_port (Port): inout data port
       - ip (str): IP address of UDP server which receive data
       - port (int): socket port
-
     Example: UdpSend(port895, ip="127.0.0.1", port=20001)
     """
 
@@ -208,7 +271,6 @@ class RdaReceive(Node):
       - offset (float): offset (in second) to apply to incoming data timestamps, default is 0
       - host (str): RDA host, default is 'localhost', it could be the IP adress of the host
       - timeout (float): timeout in sec t get the RDA stream, default is 10
-
     Example:
         RdaReceive()
         RdaReceive(rdaport=52136, offset=.125, host='159.10.20')
@@ -218,6 +280,11 @@ class RdaReceive(Node):
         Node.__init__(self, None)
         self._buf_size_max = 2**15
         self._rdaport = rdaport
+        if rdaport == 51254: # Recview
+            self._denom = 2
+        elif rdaport == 51244: # Recorder
+            self._denom = 1
+
         self._offset = offset
         self._timeout = timeout
         self._host = host
@@ -290,7 +357,7 @@ class RdaReceive(Node):
     def update(self):
         # receive all data from socket
         raw = self._my_socket.recv(self._buf_size_max)
-        # concatenate with last value in persitence
+        # concatenate with last value in persistence
         raw = self._persistent + raw
         # initialize loop
         data_to_send = []
@@ -321,7 +388,8 @@ class RdaReceive(Node):
                             self._time = time() - points / self._frequency
                         timestamps += [self._time - self._offset + i / self._frequency for i in range(points)]
                         for marker in markers:
-                            self.marker_output.set([marker['message'][1]] * marker['points'], [timestamps[marker['position'] + i - 1] for i in range(int(marker['points']))])
+                            # /Gustavo: for each marker, get 1 message and 1 timestamp
+                            self.marker_output.set([marker['message'][1]], [timestamps[marker['position']]])
                         # self._time points to the timestamp of first row from next block
                         self._time = timestamps[-1] + self._offset + 1 / self._frequency
                 else:
@@ -391,9 +459,10 @@ class RdaReceive(Node):
         markers = []
         index = 12 + 4 * points * len(self._channels)
         for m in range(markerCount):
-            markersize = unpack('<L', rawdata[index:index + 4])
-            (position, points2, channel) = unpack('<LLl', rawdata[index + 4:index + 16])
-            typedesc = self._split_string(rawdata[index + 16:index + markersize[0]])
+            # /Gustavo: Correct markersize, according to data coming from Recorder or Recview
+            (markersize, position, points2, channel) = unpack('<LLLl', rawdata[index:index + 16])
+            true_markersize = (markersize - 16) // self._denom + 16
+            typedesc = self._split_string(rawdata[index + 16:index + true_markersize])
             markers.append({'position': position, 'points': points2, 'message': typedesc})
-            index = index + markersize[0]
+            index = index + true_markersize
         return (block, points, data, markers)
