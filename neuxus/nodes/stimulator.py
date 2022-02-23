@@ -377,7 +377,7 @@ class Stimulator(Node):
 
     """
 
-    def __init__(self, file):
+    def __init__(self, file, start_marker=None, input_port=None):
         Node.__init__(self, None)
         try:
             config = Config(file)
@@ -386,6 +386,15 @@ class Stimulator(Node):
             exit()
 
         self._scenario = config.create_a_new_scenario()
+
+        # if (start_marker is not None) and (input_port is not None):
+        #     self.start_marker = start_marker
+        #     self.start = False
+        # else:
+        #     self.start = True
+
+        self.start_marker = start_marker
+        self.start = (start_marker is None) or (input_port is None)
 
         self.output.set_parameters(
             data_type='marker',
@@ -412,18 +421,25 @@ class Stimulator(Node):
         self._start_time = None
 
     def update(self):
-        if not self._start_time:
-            self._start_time = time()
-            for markers in self._scenario:
-                markers[1] = markers[1] + self._start_time
-        t = time()
-        while self._scenario and t >= self._scenario[0][1]:
-            self.output.set(self._scenario[0][0], [self._scenario[0][1]], ['marker'])
-            try:
-                self.plot_pipe.send(self._scenario[0][0])
-            except BrokenPipeError:
-                pass
-            self._scenario = self._scenario[1:]
+        if not self.start:
+            for chunk in self.input:
+                values = chunk.select_dtypes(include=[np.number]).values
+                self.start = self.start_marker in values
+                print('self.start', self.start)
+
+        if self.start:
+            if not self._start_time:
+                self._start_time = time()
+                for markers in self._scenario:
+                    markers[1] = markers[1] + self._start_time
+            t = time()
+            while self._scenario and t >= self._scenario[0][1]:
+                self.output.set(self._scenario[0][0], [self._scenario[0][1]], ['marker'])
+                try:
+                    self.plot_pipe.send(self._scenario[0][0])
+                except BrokenPipeError:
+                    pass
+                self._scenario = self._scenario[1:]
 
     def terminate(self):
         try:

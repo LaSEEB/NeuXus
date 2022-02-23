@@ -163,15 +163,24 @@ class Plot(Node):
             pass
 
 
-MARKERS = {
-    'show_cross': 786,
-    'show_rigth_arrow': 770,
-    'show_left_arrow': 769,
-    'hide_arrow': 781,
-    'hide_cross': 800,
-    'exit_': 1010,
-}
+# MARKERS = {
+#     'show_cross': 786,
+#     'show_rigth_arrow': 770,
+#     'show_left_arrow': 769,
+#     'hide_arrow': 781,
+#     'hide_cross': 800,
+#     'exit_': 1010,
+# }
 
+# In case reading from Recorder:
+MARKERS = {
+    'show_cross': 'Stimulus/S  5',
+    'show_rigth_arrow': 'Stimulus/S  8',
+    'show_left_arrow': 'Stimulus/S  7',
+    'hide_arrow': 'Stimulus/S  9',
+    'hide_cross': 'Stimulus/S 10',
+    'exit_': 'Stimulus/S 12',
+}
 
 class CustomCanvas(Canvas):
     """Custom Canvas fitting with graz visualization with function to update the content

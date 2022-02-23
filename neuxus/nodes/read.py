@@ -57,7 +57,8 @@ class Reader(Node):
                     value = float(nb_to_event[h[2]])
                 except ValueError:
                     value = nb_to_event[h[2]]
-                self._events.append((h[0] / 1000, value))
+                # self._events.append((h[0] / 1000, value))
+                self._events.append((h[0] / self._sampling_frequency, value))
             self._end_record = self._raw.times[-1]
             self._start_record = self._raw.times[0]
         elif self._file_extension == '.xdf':

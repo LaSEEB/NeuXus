@@ -93,6 +93,8 @@ class LslSend(Node):
             'channels': self.input.channels
         })
 
+        print('self.input.channels:', self.input.channels)
+
     def connect(self):
         '''Create an outlet for streaming data'''
         if not self.outlet:
@@ -126,7 +128,9 @@ class LslSend(Node):
                 for row, stamp in zip(values, stamps):
                     rowstart = row[0][:4]       # To target "Sync On"/"Sync Off" markers
                     rowend = row[0][-3:]        # To target "Rxxx"/"Sxxx" markers, where xxx is int
-                    if rowend[-1:].isdigit():   # Just check the last char, because spaces before turn this False...
+                    if rowstart == "New":
+                        pass
+                    elif rowend[-1:].isdigit():   # Just check the last char, because spaces before turn this False...
                         self.outlet.push_sample([int(rowend)], stamp)
                     elif rowstart == "Sync":
                         self.outlet.push_sample([13], stamp)
