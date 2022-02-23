@@ -62,7 +62,7 @@ class Mat(Node):
         i = 0
         while os.path.exists(f'temp{i:04d}.h5'):
             i += 1
-        self._key = f'temp{i:02d}'
+        self._key = f'temp{i:04d}'
         self._save_file = self._key + '.h5'
         self._min_itemsize = min_itemsize
 
