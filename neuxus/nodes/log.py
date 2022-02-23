@@ -60,7 +60,7 @@ class Mat(Node):
 
         # GUSTAVO TEST;
         i = 0
-        while os.path.exists(f'temp{i:02d}.h5'):
+        while os.path.exists(f'temp{i:04d}.h5'):
             i += 1
         self._key = f'temp{i:02d}'
         self._save_file = self._key + '.h5'
