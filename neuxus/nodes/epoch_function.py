@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from scipy import signal
+from scipy import signal, stats
 
 from neuxus.node import Node
 
