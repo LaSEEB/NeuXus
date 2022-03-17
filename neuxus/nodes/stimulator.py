@@ -378,7 +378,7 @@ class Stimulator(Node):
     """
 
     def __init__(self, file, start_marker=None, input_port=None):
-        Node.__init__(self, None)
+        Node.__init__(self, input_port, None)
         try:
             config = Config(file)
         except (ConfigFileNotInAccordance, FileNotFound, InvalidXml) as err:

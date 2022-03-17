@@ -55,12 +55,27 @@ class ButterFilter(Node):
 
     def update(self):
         for chunk in self.input:
+            # print('chunk = ', chunk)
+            # print('self._zi = ', self._zi)
+            # print('self._b = ', self._b)
+            # print('self._a = ', self._a)
+            # print('np.shape(chunk) = ', np.shape(chunk))
+            # print('np.shape(self._zi) = ', np.shape(self._zi))
+            # print('np.shape(self._b) = ', np.shape(self._b))
+            # print('np.shape(self._a) = ', np.shape(self._a))
             # filter
-            y, zf = signal.lfilter(
-                self._b, self._a, chunk.transpose(), zi=self._zi)
+            y, zf = signal.lfilter(self._b, self._a, chunk.transpose(), zi=self._zi)
             # zf are the future initial conditions
             self._zi = zf
             # update output port
+            # GUSTAVO:
+            # print('y = ', y)
+            # print('np.shape(y) = ', np.shape(y))
+            # print('zf = ', zf)
+            # print('np.shape(zf) = ', np.shape(zf))
+
+            # print('chunk.index = ', chunk.index)
+            # print('self.input.channels = ', self.input.channels)
             self.output.set(np.array(y).transpose(),
                             chunk.index, self.input.channels)
 
