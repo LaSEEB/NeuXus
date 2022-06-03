@@ -503,7 +503,7 @@ class Stimulator_when(Node):
             # print('self.input: ', self.input)
             # print('self.input._data: ', self.input._data)
             for chunk in self.input:
-                print('chunk: ', chunk)
+                # print('chunk: ', chunk)
                 # print(chunk[0].str.contains('R128').any())
                 # print(chunk.iloc[:,0].str.contains('R128').any())
                 if chunk.iloc[:,0].str.contains(self.start_marker).any():
