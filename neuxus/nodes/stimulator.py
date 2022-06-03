@@ -446,3 +446,85 @@ class Stimulator(Node):
             self.plot_pipe.send(None,)
         except BrokenPipeError:
             pass
+
+
+class Stimulator_when(Node):
+    """Generate a marker stream from a config file
+    Attributes:
+      - output (Port): Output port
+    Args:
+      - file (str): Path to the xml config file
+
+    example: Stimulator('config_ov.xml)
+
+    """
+
+    # def __init__(self, file, input_port):
+        # Node.__init__(self, input_port, False)
+    def __init__(self, file, input_port, start_marker):
+        Node.__init__(self, input_port, True)
+        try:
+            config = Config(file)
+        except (ConfigFileNotInAccordance, FileNotFound, InvalidXml) as err:
+            print(err)
+            exit()
+
+        self._scenario = config.create_a_new_scenario()
+        self.start_marker = start_marker
+        self.start = False
+
+        self.output.set_parameters(
+            data_type='marker',
+            channels=['marker'],
+            sampling_frequency=0,
+            meta='')
+
+        # create the plot process
+        self.plot_pipe, plotter_pipe = mp.Pipe()
+        self.plotter = ProcessStim(len(self._scenario))
+        self.plot_process = mp.Process(
+            target=self.plotter, args=(plotter_pipe,), daemon=True)
+        self.plot_process.start()
+
+        Node.log_instance(self, {
+            'file': file,
+            'name': config.name,
+            'author': config.author,
+            'session': config.session,
+            'nb of trials': config.number_of_trials,
+            'classes': config.classes,
+            'random': config.random,
+            'type': config.type})
+        self._start_time = None
+
+    def update(self):
+
+        if not self.start:
+            # print('self.input: ', self.input)
+            # print('self.input._data: ', self.input._data)
+            for chunk in self.input:
+                print('chunk: ', chunk)
+                # print(chunk[0].str.contains('R128').any())
+                # print(chunk.iloc[:,0].str.contains('R128').any())
+                if chunk.iloc[:,0].str.contains(self.start_marker).any():
+                    self.start = True
+
+        if self.start:
+            if not self._start_time:
+                self._start_time = time()
+                for markers in self._scenario:
+                    markers[1] = markers[1] + self._start_time
+            t = time()
+            while self._scenario and t >= self._scenario[0][1]:
+                self.output.set(self._scenario[0][0], [self._scenario[0][1]], ['marker'])
+                try:
+                    self.plot_pipe.send(self._scenario[0][0])
+                except BrokenPipeError:
+                    pass
+                self._scenario = self._scenario[1:]
+
+    def terminate(self):
+        try:
+            self.plot_pipe.send(None,)
+        except BrokenPipeError:
+            pass
