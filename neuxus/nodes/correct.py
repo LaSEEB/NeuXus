@@ -48,7 +48,10 @@ class GA(Node):
         for chunk in self.marker_input_port:
             if not self.start:
                 values = chunk.select_dtypes(include=['object']).values
+                print('values = ', values)
+                print('self.start_marker = ', self.start_marker)
                 self.start = self.start_marker in values
+                print('self.start = ', self.start)
 
         for chunk in self.input:
             if self.start:
@@ -183,7 +186,7 @@ class PA(Node):
                 self.input._data[i] = self.input._data[i][tlim1_ga:]  # REMOVE IF EMPTY
             if self.input._data[0].empty:
                 self.input._data = []
-            print('self.input._data = ', self.input._data)
+            # print('self.input._data = ', self.input._data)
 
 
     def update(self):
@@ -208,8 +211,8 @@ class PA(Node):
                         clim2 = clim1 + (self.win_len - self.lim1)  # clim1 WILL BE ALMOST ALWAYS = 0 (BUT IN THE FIRST GA-CORRECTED CHUNK IT MIGHT NOT)
                         self.fill(chunk, clim1, clim2)
                         self.fill_buffers(chunk, 0, clim2)  # For the case where first chunk is huge: include all in buffer (to send out), but include only part after GA in wins
-                        print('clim2 = ', clim2)
-                        print('chunk.index = ', chunk.index)
+                        # print('clim2 = ', clim2)
+                        # print('chunk.index = ', chunk.index)
                         # print('chunk.index[clim2] = ', chunk.index[clim2])
                         self.detect(chunk.index[clim2-1])
                         self.make_template()
@@ -316,7 +319,7 @@ class PA(Node):
         self.hcp = self.hcp_win[self.stride-1]
 
     def detect(self, last_time):
-        print('last_time = ', last_time)
+        # print('last_time = ', last_time)
         ecg_win = np.asarray(self.eegwin, dtype=np.float32)[:, self.ecg_chn:self.ecg_chn+1]  # ecg_win = np.asarray([self.eegwin[i][self.ecg_chn] for i in range(len(self.eegwin))])
         norm_win = normalize_bound(ecg_win, lb=-1, ub=1)
 
