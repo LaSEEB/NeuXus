@@ -1,6 +1,6 @@
 import numpy as np
 import pickle
-from numba import jit
+# from numba import jit
 import time
 
 
@@ -11,16 +11,16 @@ class Rpredict:
         self.c = np.zeros((1, self.weights['u']), dtype=np.float32)
 
         # Dummy call for numba
-        dummy = np.zeros((self.weights['t'], 1), dtype=np.float32)
-        t1 = time.perf_counter()
-        self.predict(dummy)
-        print('detection_time: ', time.perf_counter() - t1)
+        # dummy = np.zeros((self.weights['t'], 1), dtype=np.float32)
+        # t1 = time.perf_counter()
+        # self.predict(dummy)
+        # print('detection_time: ', time.perf_counter() - t1)
 
     def predict(self, xt):
         return self._predict(xt, self.ht, self.c, **self.weights)
 
     @staticmethod
-    @jit(nopython=True)
+    # @jit(nopython=True)
     def _predict(xt, ht, c, u, t, whf1f, wxf1f, bf1f, whi1f, wxi1f, bi1f, whl1f, wxl1f, bl1f, who1f, wxo1f, bo1f, whf1b, wxf1b, bf1b, whi1b, wxi1b, bi1b, whl1b, wxl1b, bl1b, who1b, wxo1b, bo1b, whf2f, wxf2f, bf2f, whi2f, wxi2f, bi2f, whl2f, wxl2f, bl2f, who2f, wxo2f, bo2f, whf2b, wxf2b, bf2b, whi2b, wxi2b, bi2b, whl2b, wxl2b, bl2b, who2b, wxo2b, bo2b, wd, bd):
 
         def tanh(a):
