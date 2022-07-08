@@ -402,7 +402,7 @@ class PA(Node):
         part = chunk.iloc[clim1:clim2]
         part_len = len(part)
         self.eegwin.extend(part.to_numpy().copy())
-        if not self.debug_save:
+        if self.debug_save:
             pickle.dump(self.eegwin, open('eegwin.pkl', 'wb'))
             self.debug_save = True
 
