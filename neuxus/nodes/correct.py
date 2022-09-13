@@ -97,7 +97,7 @@ class GA(Node):
 
 
 class PA(Node):
-    def __init__(self, input_port, weight_path, win_len, stride, start_marker=None, marker_input_port=None, min_weight=10, max_wins=15, min_hc=0.4, max_hc=1.5, short_sight='both', min_foresight=0.1, thres=0.05):
+    def __init__(self, input_port, weight_path, win_len, stride, start_marker=None, marker_input_port=None, min_weight=10, max_wins=15, min_hc=0.4, max_hc=1.5, short_sight='both', min_foresight=0.1, thres=0.05, numba=False):
         Node.__init__(self, input_port)
         fs = self.input.sampling_frequency
         self.fs = fs
@@ -122,6 +122,7 @@ class PA(Node):
             sampling_frequency=0,
             meta=''
         )
+
         self.nchans = len(self.input.channels)
         self.ecg_chn = self.input.channels.index('ECG')
         self.filled = False
@@ -152,7 +153,7 @@ class PA(Node):
         self.wins_fix = deque(np.zeros((max_wins + 1, self.max_hc_len, self.nchans)), maxlen=max_wins + 1)
         self.wins_fix_len = deque(np.zeros((max_wins + 1), dtype=int), maxlen=max_wins + 1)
 
-        self.predictor = Rpredict(weight_path)
+        self.predictor = Rpredict(weight_path, numba)
         self.part_lims = [part_lim for part_lim in range(0, self.win_len, self.stride)] + [self.win_len]                # e.g. [0 250 500 750 1000]
         self.nparts = len(self.part_lims) - 1                                                                           # e.g. 4
         self.pred_wins = deque(maxlen=self.nparts)
@@ -165,6 +166,13 @@ class PA(Node):
         self.pa_corrected = False
 
         self.debug_save = False
+        self.numba = numba
+
+        if self.numba:
+            dummy = np.zeros((self.predictor.weights['t'], 1), dtype=np.float32)
+            t1 = time.perf_counter()
+            self.predictor.predict(dummy,self.numba)
+            print('detection_time: ', time.perf_counter() - t1)
 
         # self.tol = 1 / fs / 2  # Half period
 
@@ -244,7 +252,6 @@ class PA(Node):
                             chunk_out = self.subtract(chunk_out, chunk_hcp)
                             # print('2) len(chunk_out) = ', len(chunk_out))
                             self.output.set_from_df(chunk_out)
-
                     else:
                         pass
                         # chunk_out = self.chunk_keep.iloc[0:0]
@@ -252,6 +259,7 @@ class PA(Node):
                     self.fill(chunk, clim1, lchunk)
                     self.fill_buffers(chunk, clim1, lchunk)
                     self.new = self.new + lchunk - clim1  # new points not yet used for detection
+
             else:
                 chunk_out = chunk
                 # print('3) len(chunk_out) = ', len(chunk_out))
@@ -323,9 +331,9 @@ class PA(Node):
         ecg_win = np.asarray(self.eegwin, dtype=np.float32)[:, self.ecg_chn:self.ecg_chn+1]  # ecg_win = np.asarray([self.eegwin[i][self.ecg_chn] for i in range(len(self.eegwin))])
         norm_win = normalize_bound(ecg_win, lb=-1, ub=1)
 
-        t1 = time.perf_counter()
-        pred_win = self.predictor.predict(norm_win)
-        print('detection_time: ', time.perf_counter() - t1)
+        # t1 = time.perf_counter()
+        pred_win = self.predictor.predict(norm_win, self.numba)
+        # print('detection_time: ', time.perf_counter() - t1)
 
         # Average overlapping parts in last prediction windows
         self.pred_wins.appendleft(pred_win)
@@ -415,20 +423,8 @@ class PA(Node):
         new_hcp_array = self.create_constant_array(len(part), self.max_hc_len)
         self.chunk_keep_hcp = np.append(self.chunk_keep_hcp, new_hcp_array)
 
-    def find_start_of_ga_corrected(self, chunk):
-        clim1 = 0
-        if not self.ga_corrected_de_facto:
-            if self.input.ga_corrected:
-                if bisect_left(chunk.index, self.input.tlim1 - self.tol) < len(chunk):
-                    self.ga_corrected_de_facto = True
-                    clim1 = bisect_left(chunk.index, tlim1_ga)
-        return clim1
-
     @staticmethod
     def create_constant_array(length, value):
         array = np.empty(length, dtype=int)
         array.fill(value)
         return array
-
-
-# z = pickle.load(open(r'C:\Users\guta_\OneDrive\Neuro\Online_correction\tests\neuxus_integration\eegwin.pkl', 'rb'))
