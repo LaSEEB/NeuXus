@@ -219,7 +219,7 @@ class Laplacian(Node):
         Y = np.zeros(len(chanlocs))
         Z = np.zeros(len(chanlocs))
         for c, chanloc in enumerate(chanlocs):
-            X[c] = chanloc['r'][0]
+            X[c] = chanloc['r'][0]  # maybe should convert whatever unit (if read from .vhdr: mm) to cm
             Y[c] = chanloc['r'][1]
             Z[c] = chanloc['r'][2]
 
@@ -287,7 +287,7 @@ class Laplacian(Node):
 
     def update(self):
         for chunk in self.input:
-            data = np.transpose(np.asarray(chunk).copy())
+            data = np.transpose(np.asarray(chunk))
             nchans = len(data)
             Gs = self.G + np.eye(nchans)*self.smoothing
             GsinvS = np.sum(np.linalg.inv(Gs), axis=0, keepdims=True)
