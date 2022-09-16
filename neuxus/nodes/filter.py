@@ -287,11 +287,11 @@ class Laplacian(Node):
 
     def update(self):
         for chunk in self.input:
-            data = np.asarray(chunk).copy()
+            data = np.transpose(np.asarray(chunk).copy())
             nchans = len(data)
             Gs = self.G + np.eye(nchans)*self.smoothing
             GsinvS = np.sum(np.linalg.inv(Gs), axis=0, keepdims=True)
-            dataGs = np.transpose(np.linalg.lstsq(Gs, data)[0])
+            dataGs = np.transpose(np.linalg.lstsq(Gs, data,rcond=None)[0])
             C = dataGs - (np.sum(dataGs, axis=1, keepdims=True) / np.sum(GsinvS)) @ GsinvS
-            lap = np.transpose(C @ np.transpose(self.H))
+            lap = C @ np.transpose(self.H)
             self.output.set(lap, chunk.index, columns=self.input.channels)
