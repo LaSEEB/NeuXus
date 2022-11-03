@@ -4,7 +4,7 @@ kiwisolver==1.1.0
 matplotlib==3.2.1
 mne==0.20.7
 pandas==1.0.3
-numpy==1.23.3
+numpy==1.19.5
 pylsl==1.12.2
 pynput==1.6.8
 pyparsing==2.4.6
