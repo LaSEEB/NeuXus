@@ -393,7 +393,10 @@ class RdaReceive(Node):
                         timestamps += [self._time - self._offset + i / self._frequency for i in range(points)]
                         for marker in markers:
                             # /Gustavo: for each marker, get 1 message and 1 timestamp
-                            self.marker_output.set([marker['message'][1]], [timestamps[marker['position']]])
+                            # Taken from BrainVision LSL RDA client: https://github.com/brain-products/LSL-BrainVisionRDA/blob/master/mainwindow.cpp#L315-L335
+                            # Still, I have shown the marker timestamps received are not exactly the same as the ones originally sent... (I have compared them the originally sent by simulating+saving a sinusoid+markers in Recorder)
+                            tm = timestamps[0] + (marker['position'] + 1) / self._frequency  # timestamps[0] corresponds to: now + (-samples.size())/rdaInfo.sampleRate;
+                            self.marker_output.set([marker['message'][1]], [tm])
                         # self._time points to the timestamp of first row from next block
                         self._time = timestamps[-1] + self._offset + 1 / self._frequency
                 else:
