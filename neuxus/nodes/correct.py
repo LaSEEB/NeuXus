@@ -108,20 +108,20 @@ class PA(Node):
             meta=self.input.meta,
             epoching_frequency=self.input.epoching_frequency
         )
-        self.marker_output_pa = Port()
-        self.marker_output_pa.set_parameters(
+        self.marker_output = Port()
+        self.marker_output.set_parameters(
             data_type='marker',
             channels=['marker'],
             sampling_frequency=0,
             meta=''
         )
-        self.marker_output_r = Port()
-        self.marker_output_r.set_parameters(
-            data_type='marker',
-            channels=['marker'],
-            sampling_frequency=0,
-            meta=''
-        )
+        # self.marker_output_r = Port()
+        # self.marker_output_r.set_parameters(
+            # data_type='marker',
+            # channels=['marker'],
+            # sampling_frequency=0,
+            # meta=''
+        # )
 
         self.nchans = len(self.input.channels)
         self.ecg_chn = self.input.channels.index('ECG')
@@ -277,7 +277,7 @@ class PA(Node):
         if any(mask):
             if not self.pa_corrected:
                 self.pa_corrected = True
-                self.marker_output_pa.set(['Start of PA correction'], [chunk.index[np.argmax(mask)]])
+                self.marker_output.set(['Start of PA correction'], [chunk.index[np.argmax(mask)]])
         return chunk
 
     def label_chunk_keep(self):
@@ -393,7 +393,7 @@ class PA(Node):
         self.rwin = deque([False] * self.win_len, maxlen=self.win_len)
         for fi in filt_ids:
             self.rwin[fi] = True
-            self.marker_output_r.set(['R'], [last_time - (self.win_len - 1 - fi) / self.fs])
+            self.marker_output.set(['R'], [last_time - (self.win_len - 1 - fi) / self.fs])
 
 
         # Short-sight
