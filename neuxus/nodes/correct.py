@@ -268,13 +268,14 @@ class PA(Node):
             # self.output.set_from_df(chunk_out)
 
     def subtract(self, chunk, chunk_hcp):
-        mat = np.asarray(chunk)
+        # mat = np.asarray(chunk)
         mask_len = chunk_hcp < self.max_hc_len
         mask_wei = self.weights[chunk_hcp * mask_len] > self.min_weight
         mask = mask_len * mask_wei
-        mat[mask] -= np.transpose(self.temp[:, chunk_hcp[mask]])
-        chunk.iloc[:, :self.ecg_chn] = mat[:, :self.ecg_chn]
+        # mat[mask] -= np.transpose(self.temp[:, chunk_hcp[mask]])
+        # chunk.iloc[:, :self.ecg_chn] = mat[:, :self.ecg_chn]
         if any(mask):
+            chunk.iloc[mask, :self.ecg_n] -= np.transpose(self.temp[:self.ecg_n, chunk_hcp[mask]])
             if not self.pa_corrected:
                 self.pa_corrected = True
                 self.marker_output.set(['Start of PA correction'], [chunk.index[np.argmax(mask)]])
