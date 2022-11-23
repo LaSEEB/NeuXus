@@ -273,7 +273,7 @@ class PA(Node):
         mask_wei = self.weights[chunk_hcp * mask_len] > self.min_weight
         mask = mask_len * mask_wei
         mat[mask] -= np.transpose(self.temp[:, chunk_hcp[mask]])
-        chunk[:, :self.ecg_chn] = mat[:, :self.ecg_chn]
+        chunk.iloc[:, :self.ecg_chn] = mat[:, :self.ecg_chn]
         if any(mask):
             if not self.pa_corrected:
                 self.pa_corrected = True
