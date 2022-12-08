@@ -530,29 +530,14 @@ class WFDBPeaks:
 
         # Shift peaks to local maxima
         if peak_dir == 'up':
-            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=sig,
-                                            peak_inds=peak_inds,
-                                            search_radius=search_radius,
-                                            peak_up=True)
+            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=True)
         elif peak_dir == 'down':
-            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=sig,
-                                            peak_inds=peak_inds,
-                                            search_radius=search_radius,
-                                            peak_up=False)
+            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=False)
         elif peak_dir == 'both':
-            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=np.abs(sig),
-                                            peak_inds=peak_inds,
-                                            search_radius=search_radius,
-                                            peak_up=True)
+            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=np.abs(sig), peak_inds=peak_inds, search_radius=search_radius, peak_up=True)
         else:
-            shifted_peak_inds_up = WFDBPeaks.shift_peaks(sig=sig,
-                                               peak_inds=peak_inds,
-                                               search_radius=search_radius,
-                                               peak_up=True)
-            shifted_peak_inds_down = WFDBPeaks.shift_peaks(sig=sig,
-                                                 peak_inds=peak_inds,
-                                                 search_radius=search_radius,
-                                                 peak_up=False)
+            shifted_peak_inds_up = WFDBPeaks.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=True)
+            shifted_peak_inds_down = WFDBPeaks.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=False)
 
             # Choose the direction with the biggest deviation
             up_dist = np.mean(np.abs(sig[shifted_peak_inds_up]))
