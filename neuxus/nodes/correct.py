@@ -3,339 +3,247 @@ from neuxus.node import Node
 from collections import deque
 import pandas as pd
 from bisect import bisect_left
-from neuxus.nodes.temporary_peaks import correct_peaks
 from wfdb.processing import normalize_bound
-from neuxus.nodes.detect import Rpredict
 from neuxus.chunks import Port
-import time
-
+from scipy.signal import butter, filtfilt
 import pickle
+from numba import jit
+import matplotlib.pyplot as plt
+
 
 class GA(Node):
-    def __init__(self, input_port, minwins=4, maxwins=10, nchans=32, fs=5000, tr=1.260, start_marker=None, marker_input_port=None):
+    def __init__(self, input_port, marker_input_port=None, start_marker=None, min_wins=7, max_wins=30, tr=1.260, fs=5000):
         Node.__init__(self, input_port)
-        self.output.set_parameters(
-            data_type=self.input.data_type,
-            channels=self.input.channels,
-            sampling_frequency=self.input.sampling_frequency,
-            meta=self.input.meta,
-            epoching_frequency=self.input.epoching_frequency,
-        )
 
+        self.marker_input = marker_input_port
+        self.output.set_parameters(data_type=self.input.data_type, channels=self.input.channels, sampling_frequency=self.input.sampling_frequency,  meta=self.input.meta, epoching_frequency=self.input.epoching_frequency,)
         self.marker_output = Port()
-        self.marker_output.set_parameters(
-            data_type='marker',
-            channels=['marker'],
-            sampling_frequency=0,
-            meta=''
-        )
-        self.ga_corrected = False
-
-        self.start = (start_marker is None) or (marker_input_port is None)
-        self.marker_input_port = marker_input_port
-        self.start_marker = start_marker
-
-        self.nchans = nchans
-        self.minwins = minwins
-        self.maxwins = maxwins
-        self.npnts = int(tr * fs)  # This should be already a .0 number!!, so int just affects the type, not the value
-        self.tempwins = deque(np.zeros((self.maxwins + 1, self.npnts, self.nchans)), maxlen=self.maxwins + 1)
+        self.marker_output.set_parameters(data_type='marker', channels=['marker'], sampling_frequency=0, meta='')
+        self.channels = self.input.channels
+        self.nchans = len(self.channels)
+        self.min_wins = min_wins
+        self.max_wins = max_wins
+        self.npnts = int(tr * fs)                                                   # This should be already an integer value! So int() just affects the type, not the value.
+        self.temp_wins = deque(np.zeros((self.max_wins + 1, self.npnts, self.nchans)), maxlen=self.max_wins + 1)
         self.template = np.zeros((self.npnts, self.nchans))
         self.lim1 = 0
         self.wcount = 0
+        self.start_marker = start_marker
+        self.find_start_marker = (self.start_marker is not None) and (marker_input_port is not None)
+        self.found_start_marker = False
+        self.found_start_point = not self.find_start_marker
+        self.building_start = True
+        self.building_start_time = None
+        self.subtracting_start = True
+        self.subtracting_start_time = None
 
     def update(self):
-        for chunk in self.marker_input_port:
-            if not self.start:
-                values = chunk.select_dtypes(include=['object']).values
-                print('values = ', values)
-                print('self.start_marker = ', self.start_marker)
-                self.start = self.start_marker in values
-                print('self.start = ', self.start)
+        # Find the start time in the marker stream
+        if self.find_start_marker:
+            for marker in self.marker_input:
+                marker_values = marker.select_dtypes(include=['object']).values
+                # print('marker_values = ', marker_values)
+                if self.start_marker in marker_values:
+                    self.building_start_time = marker.index[(marker_values == self.start_marker)[:, 0]][0]
+                    self.find_start_marker = False
+                    self.found_start_marker = True
 
         for chunk in self.input:
-            if self.start:
-                index = chunk.index
-                chunk = chunk.to_numpy(copy=True)
+            clim1 = 0
+            # Find the start time in the data stream
+            if not self.found_start_point:
+                if self.found_start_marker:
+                    clim1 = bisect_left(chunk.index, self.building_start_time)
+                    if clim1 < len(chunk):                                      # If the current data times alerady reached or passed the start marker time
+                        self.found_start_point = True
+            # GA-correct
+            if self.found_start_point:
+                # Send a marker to mark the start of the GA building
+                if self.building_start:
+                    if not self.found_start_marker:
+                        self.building_start_time = chunk.index[0]
+                    self.marker_output.set(['Start of GA building'], [self.building_start_time])
+                    self.building_start = False
+
                 lchunk = len(chunk)
-                lim2 = self.lim1 + lchunk
-                clim1 = 0
-                for i in range(0, (lim2 - 1) // self.npnts):
+                lim2 = self.lim1 + lchunk - clim1
+                for _ in range(0, (lim2 - 1) // self.npnts):                    # For each time the current chunk completes a window: 0, 1 or >1 (in case it is enormous)
                     clim2 = clim1 + (self.npnts - self.lim1)
-                    self.fill(chunk, self.npnts, clim1, clim2)
-                    self.average(self.npnts)
-                    if self.wcount >= self.minwins - 1:
-                        chunk = self.subtract(chunk, self.npnts, clim1, clim2)
-                    self.tempwins.append(np.zeros((self.npnts, self.nchans)))
+                    self.fill(chunk, self.npnts, clim1, clim2)                  # Complete the window
+                    self.average(self.npnts)                                    # Update the template
+                    chunk = self.subtract(chunk, self.npnts, clim1, clim2)      # Subtract the template to the current chunk
+                    self.temp_wins.append(np.zeros((self.npnts, self.nchans)))  # Start a new window
                     self.wcount += 1
                     self.lim1 = 0
                     lim2 = lchunk - clim2
                     clim1 = clim2
 
-                self.fill(chunk, lim2, clim1, lchunk)
-                self.average(lim2)
-                if self.wcount >= self.minwins - 1:
-                    chunk = self.subtract(chunk, lim2, clim1, lchunk)
-                    if not self.ga_corrected:
-                        self.ga_corrected = True
-                        self.marker_output.set(['Start of GA correction'], [index[clim1]])
+                self.fill(chunk, lim2, clim1, lchunk)                           # Continue filling the window
+                self.average(lim2)                                              # Update the template
+                chunk = self.subtract(chunk, lim2, clim1, lchunk)               # Subtract the template to the current chunk
                 self.lim1 = lim2
-                self.output.set(chunk, index, self.input.channels)
-            else:
-                index = chunk.index
-                self.output.set(chunk, index, self.input.channels)
+            self.output.set_from_df(chunk)
 
     def fill(self, chunk, lim2, clim1, clim2):
-        self.tempwins[-1][self.lim1:lim2, :] = chunk[clim1:clim2, :]
+        self.temp_wins[-1][self.lim1:lim2, :] = chunk.iloc[clim1:clim2, :]
 
     def average(self, lim2):
-        self.template[self.lim1:lim2, :] = (self.template[self.lim1:lim2, :] * min(self.wcount, self.maxwins) - self.tempwins[0][self.lim1:lim2, :] + self.tempwins[-1][self.lim1:lim2, :]) / min((self.wcount + 1), self.maxwins)
+        self.template[self.lim1:lim2, :] = (self.template[self.lim1:lim2, :] * min(self.wcount, self.max_wins) - self.temp_wins[0][self.lim1:lim2, :] + self.temp_wins[-1][self.lim1:lim2, :]) / min((self.wcount + 1), self.max_wins)
 
     def subtract(self, chunk, lim2, clim1, clim2):
-        chunk[clim1:clim2, :] = chunk[clim1:clim2, :] - self.template[self.lim1:lim2, :]
-        return chunk
+        mat = chunk.to_numpy(copy=True)                                                   # Unfortunately subtracting the dataframe raises an error, so it is converted to numpy
+        if self.wcount >= self.min_wins - 1:
+            mat[clim1:clim2, :] = mat[clim1:clim2, :] - self.template[self.lim1:lim2, :]  # Subtract the template to the current chunk
+            # Send a marker to mark the start of the GA subtraction
+            if self.subtracting_start:
+                self.subtracting_start_time = chunk.index[clim1]
+                self.marker_output.set(['Start of GA subtraction'], [self.subtracting_start_time])
+                self.subtracting_start = False
+
+        return pd.DataFrame(data=mat, index=chunk.index, columns=chunk.columns)
 
 
 class PA(Node):
-    def __init__(self, input_port, weight_path, win_len, stride, start_marker=None, marker_input_port=None, min_weight=10, max_wins=15, min_hc=0.4, max_hc=1.5, short_sight='both', min_foresight=0.1, thres=0.05, numba=False):
+    def __init__(self, input_port, weights_path, marker_input_port=None, start_marker='Start of GA subtraction', stride=50, min_wins=10, max_wins=20, min_hc=0.4, max_hc=1.5, short_sight='both', margin=0.1, thres=0.05, filter_ecg=True, numba=True):
         Node.__init__(self, input_port)
+
         fs = self.input.sampling_frequency
-        self.fs = fs
-        self.output.set_parameters(
-            data_type=self.input.data_type,
-            channels=self.input.channels,
-            sampling_frequency=fs,
-            meta=self.input.meta,
-            epoching_frequency=self.input.epoching_frequency
-        )
+        self.marker_input = marker_input_port
+        self.output.set_parameters(data_type=self.input.data_type, channels=self.input.channels, sampling_frequency=fs, meta=self.input.meta, epoching_frequency=self.input.epoching_frequency)
         self.marker_output = Port()
-        self.marker_output.set_parameters(
-            data_type='marker',
-            channels=['marker'],
-            sampling_frequency=0,
-            meta=''
-        )
-        # self.marker_output_r = Port()
-        # self.marker_output_r.set_parameters(
-            # data_type='marker',
-            # channels=['marker'],
-            # sampling_frequency=0,
-            # meta=''
-        # )
-
-        self.nchans = len(self.input.channels)
-        self.ecg_chn = self.input.channels.index('ECG')
-        self.filled = False
-
-        self.start = (start_marker is None) or (marker_input_port is None)
-        self.marker_input_port = marker_input_port
-        self.start_marker = start_marker
-
-        self.lim1 = 0
-        self.win_len = win_len
-        self.new = 0
+        self.marker_output.set_parameters(data_type='marker', channels=['marker'], sampling_frequency=0, meta='')
+        self.channels = self.input.channels
+        self.nchans = len(self.channels)
+        self.ecg_id = [i for i, chan in enumerate(self.channels) if chan.upper() in ['ECG', 'EKG']][0]
         self.stride = stride
-
-        self.eegwin = deque(maxlen=win_len)
-        self.twin = deque(maxlen=win_len)
-        self.chunk_keep = pd.DataFrame()
-        self.chunk_keep_hcp = np.empty(0, dtype=int)
-
-        self.max_hc_len = round(max_hc * fs)
-        self.hcp_win = np.ones(win_len, dtype=int) * (-1)  # Should be integer already!
-        self.hc = -1
-        self.hcp = self.max_hc_len
-        self.temp_fix = np.zeros((self.nchans, self.max_hc_len))
-        self.temp = np.zeros((self.nchans, self.max_hc_len))
-        self.weights_fix = np.zeros(self.max_hc_len, dtype=int)
-        self.weights = np.zeros(self.max_hc_len, dtype=int)
-        self.min_weight = min_weight
-        self.wins_fix = deque(np.zeros((max_wins + 1, self.max_hc_len, self.nchans)), maxlen=max_wins + 1)
-        self.wins_fix_len = deque(np.zeros((max_wins + 1), dtype=int), maxlen=max_wins + 1)
-
-        self.predictor = Rpredict(weight_path, numba)
-        self.part_lims = [part_lim for part_lim in range(0, self.win_len, self.stride)] + [self.win_len]                # e.g. [0 250 500 750 1000]
-        self.nparts = len(self.part_lims) - 1                                                                           # e.g. 4
-        self.pred_wins = deque(maxlen=self.nparts)
-        self.thres = thres
-        self.min_hc_len = min_hc * fs
-
+        self.min_wins = min_wins
+        self.max_wins = max_wins
+        self.min_hc = round(min_hc * fs)
+        self.max_hc = round(max_hc * fs)
+        self.margin = round(margin * fs)
         self.short_sight = short_sight
-        self.min_foresight_len = int(min_foresight * fs)
-
-        self.pa_corrected = False
-
-        self.debug_save = False
-        self.numba = numba
-
-        if self.numba:
-            dummy = np.zeros((self.predictor.weights['t'], 1), dtype=np.float32)
-            t1 = time.perf_counter()
-            self.predictor.predict(dummy,self.numba)
-            print('detection_time: ', time.perf_counter() - t1)
-
-        # self.tol = 1 / fs / 2  # Half period
-
-    # def find_start_of_ga_corrected(self, chunk):
-    #     clim1 = 0
-    #     if not self.ga_corrected_de_facto:
-    #         if self.input.ga_corrected:
-    #             if bisect_left(chunk.index, self.input.tlim1 - self.tol) < len(chunk):
-    #                 self.ga_corrected_de_facto = True
-    #                 clim1 = bisect_left(chunk.index, tlim1_ga)
-    #     return clim1
-
-    def find_start_of_ga_corrected_and_trim(self, chunk):
-        values = chunk.select_dtypes(include=['object']).values
-        self.start = self.start_marker in values
-        if self.start:
-            tlim1_ga = chunk.index[chunk[0]==self.start_marker][0]
-            for i in range(len(self.input._data)):
-                self.input._data[i] = self.input._data[i][tlim1_ga:]  # REMOVE IF EMPTY
-            if self.input._data[0].empty:
-                self.input._data = []
-            # print('self.input._data = ', self.input._data)
-
+        self.thres = thres
+        self.predictor = PredictRPeaks(weights_path, numba=numba)
+        self.win_len = self.predictor.t
+        self.detect_win = deque(maxlen=self.win_len)
+        self.rpeaks_win = deque([False] * self.win_len, maxlen=self.win_len)
+        self.start_marker = start_marker
+        self.find_start_marker = (self.start_marker is not None) and (marker_input_port is not None)
+        self.found_start_marker = False
+        self.found_start_point = not self.find_start_marker
+        self.building_start = True
+        self.building_start_time = None
+        self.subtracting_start = True
+        self.subtracting_start_time = None
+        self.filled_detect_win = False
+        self.detection_start = True
+        self.detection_time = None
+        self.lim1 = 0
+        self.hlim = self.win_len - self.stride - self.margin  # Hold limit. Point in the detection window above which data is held until next detection to be output
+        self.reached_hold_limit = False
+        self.temp_fix = np.zeros((self.nchans, self.max_hc))
+        self.temp = np.zeros((self.nchans, self.max_hc))
+        self.weights_fix = np.zeros(self.max_hc, dtype=int)
+        self.weights = np.zeros(self.max_hc, dtype=int)
+        self.wins_fix = deque(np.zeros((self.max_wins + 1, self.max_hc, self.nchans)), maxlen=max_wins + 1)
+        self.wins_fix_len = deque(np.zeros((self.max_wins + 1), dtype=int), maxlen=max_wins + 1)
+        self.win_fix_len = 0
+        self.hcp = self.max_hc
+        self.hc = -1
+        self.hcp = self.max_hc
+        self.hcp_win = np.ones(self.win_len, dtype=int) * (-1)  # Should be integer already!
+        self.part_lims = [part_lim for part_lim in range(0, self.win_len, self.stride)] + [self.win_len]
+        self.nparts = len(self.part_lims) - 1
+        self.pred_wins = deque(maxlen=self.nparts)
+        self.time_win = deque(maxlen=self.win_len)
+        self.filter_ecg = filter_ecg
+        order = 4
+        flim = [0.5, 30]
+        self._b, self._a = butter(order, [f/(0.5 * fs) for f in flim], analog=False, btype='band', output='ba')
 
     def update(self):
-        for chunk in self.marker_input_port:
-            if not self.start:
-                self.find_start_of_ga_corrected_and_trim(chunk)
+        # Find the start time in the marker stream
+        if self.find_start_marker:
+            for marker in self.marker_input:
+                marker_values = marker.select_dtypes(include=['object']).values
+                if self.start_marker in marker_values:
+                    self.building_start_time = marker.index[(marker_values == self.start_marker)[:, 0]][0]
+                    self.find_start_marker = False
+                    self.found_start_marker = True
 
         for chunk in self.input:
-            # clim1 = self.find_start_of_ga_corrected(chunk)
-            if self.start:
-                clim1 = 0
+            clim1 = 0
+            # Find the start time in the data stream
+            if not self.found_start_point:
+                if self.found_start_marker:
+                    clim1 = bisect_left(chunk.index, self.building_start_time)
+                    if clim1 < len(chunk):  # If the current data times already reached or passed the start marker time
+                        self.found_start_point = True
+            # PA-correct
+            if self.found_start_point:
+                # Send a marker to mark the start of the GA building
+                if self.building_start:
+                    if not self.found_start_marker:
+                        self.building_start_time = chunk.index[0]
+                    self.marker_output.set(['Start of PA building'], [self.building_start_time])
+                    self.building_start = False
+
                 lchunk = len(chunk)
-                detected = False
-                if not self.filled:
-                    if (lchunk - clim1) < (self.win_len - self.lim1):
-                        self.fill(chunk, clim1, lchunk)
-                        chunk_out = chunk
-                        # print('1) len(chunk_out) = ', len(chunk_out))
-                        self.output.set_from_df(chunk_out)
-                        self.lim1 = self.lim1 + lchunk - clim1
-                    else:
-                        clim2 = clim1 + (self.win_len - self.lim1)  # clim1 WILL BE ALMOST ALWAYS = 0 (BUT IN THE FIRST GA-CORRECTED CHUNK IT MIGHT NOT)
+                lim2 = self.lim1 + lchunk - clim1
+                if not self.reached_hold_limit:
+                    if lim2 < self.hlim:
+                        clim2 = lchunk
                         self.fill(chunk, clim1, clim2)
-                        self.fill_buffers(chunk, 0, clim2)  # For the case where first chunk is huge: include all in buffer (to send out), but include only part after GA in wins
-                        # print('clim2 = ', clim2)
-                        # print('chunk.index = ', chunk.index)
-                        # print('chunk.index[clim2] = ', chunk.index[clim2])
-                        self.detect(chunk.index[clim2-1])
-                        self.make_template()
-                        self.label_chunk_keep()
-                        clim1 = clim2
-                        self.filled = True
-                        detected = True
-
-                if self.filled:
-                    for i in range(0, ((lchunk - clim1) + self.new) // self.stride):
-                        clim2 = clim1 + self.stride - self.new
-                        self.fill(chunk, clim1, clim2)
-                        self.fill_buffers(chunk, clim1, clim2)
-                        self.detect(chunk.index[clim2-1])
-                        self.make_template()
-                        self.label_chunk_keep()
-                        clim1 = clim2
-                        self.new = 0
-                        detected = True
-
-                    if detected:
-                        klim = len(self.chunk_keep) - self.short_sight_len
-                        if klim > 0:
-                            # klim = max(len(self.chunk_keep) - self.short_sight_len, 0)
-                            chunk_out = self.chunk_keep.iloc[:klim].copy()
-                            chunk_hcp = self.chunk_keep_hcp[:klim].copy()
-                            self.chunk_keep = self.chunk_keep.iloc[klim:]
-                            self.chunk_keep_hcp = self.chunk_keep_hcp[klim:]
-                            chunk_out = self.subtract(chunk_out, chunk_hcp)
-                            # print('2) len(chunk_out) = ', len(chunk_out))
-                            self.output.set_from_df(chunk_out)
+                        self.output.set_from_df(chunk)
+                        self.lim1 = lim2
+                    # Detection window data reached hold limit
                     else:
-                        pass
-                        # chunk_out = self.chunk_keep.iloc[0:0]
+                        clim2 = clim1 + self.hlim - self.lim1
+                        self.fill(chunk, clim1, clim2)  # Fill-up detection window
+                        self.output.set_from_df(chunk)
+                        self.reached_hold_limit = True
+                        self.lim1 = - self.margin
+                        lim2 = self.lim1 + lchunk - clim2  # lim2 becomes a position in the detection window in respect not to its start, but to it's (length - self.stride). Whenever it passes self.stride, a new detection is triggered.
+                        clim1 = clim2
+
+                if self.reached_hold_limit:
+                    for _ in range(0, (lim2 - 1) // self.stride):
+                        clim2 = clim1 + (self.stride - self.lim1)
+                        self.fill(chunk, clim1, clim2)
+                        self.detect()
+                        self.make_template()
+                        segment_out = pd.DataFrame(data=[self.detect_win[i] for i in range(self.hlim, self.hlim + self.stride)], index=[self.time_win[i] for i in range(self.hlim, self.hlim + self.stride)], columns=self.channels)
+                        segment_out = self.subtract(segment_out)
+                        self.output.set_from_df(segment_out)
+                        clim1 = clim2
+                        self.lim1 = 0
+                        lim2 = lchunk - clim2
 
                     self.fill(chunk, clim1, lchunk)
-                    self.fill_buffers(chunk, clim1, lchunk)
-                    self.new = self.new + lchunk - clim1  # new points not yet used for detection
+                    self.lim1 = lim2
 
             else:
-                chunk_out = chunk
-                # print('3) len(chunk_out) = ', len(chunk_out))
-                self.output.set_from_df(chunk_out)
+                self.output.set_from_df(chunk)
 
-            # self.output.set_from_df(chunk_out)
+    def fill(self, chunk, clim1, clim2):
+        extension = chunk.iloc[clim1:clim2]
+        extension_len = len(extension)
+        self.detect_win.extend(extension.to_numpy(copy=True))
+        self.time_win.extend(extension.index.to_numpy(copy=True))
+        self.rpeaks_win.extend(np.zeros(extension_len, dtype=bool))
 
-    def subtract(self, chunk, chunk_hcp):
-        # mat = np.asarray(chunk)
-        mask_len = chunk_hcp < self.max_hc_len
-        mask_wei = self.weights[chunk_hcp * mask_len] > self.min_weight
-        mask = mask_len * mask_wei
-        # mat[mask] -= np.transpose(self.temp[:, chunk_hcp[mask]])
-        # chunk.iloc[:, :self.ecg_chn] = mat[:, :self.ecg_chn]
-        if any(mask):
-            chunk.iloc[mask, :self.ecg_chn] -= np.transpose(self.temp[:self.ecg_chn, chunk_hcp[mask]])
-            if not self.pa_corrected:
-                self.pa_corrected = True
-                self.marker_output.set(['Start of PA correction'], [chunk.index[np.argmax(mask)]])
-        return chunk
-
-    def label_chunk_keep(self):
-        wlim = max(self.win_len - len(self.chunk_keep_hcp), 0)
-        copy = self.hcp_win[wlim:]
-        clim = len(self.chunk_keep_hcp) - len(copy)
-        self.chunk_keep_hcp[clim:] = copy
-
-    def make_template(self):
-        self.hcp_win.fill(self.max_hc_len)
-        for i in range(self.stride):
-            self.hcp += 1
-            if self.rwin[i]:
-                self.r_found = True
-                self.wins_fix.append(np.zeros((self.max_hc_len, self.nchans)))  # self.tempwins[-1][self.lim1:lim2, :] = chunk[clim1:clim2, :]
-                self.wins_fix_len.append(0)
-                self.hcp = 0
-                self.hc += 1  # Number of complete unmodifiable heart cycles
-                weights_fix_last = self.weights_fix.copy()
-                weights_clipped = self.weights_fix.copy()
-                weights_clipped[:self.wins_fix_len[0]] -= 1
-                weights_clipped[weights_clipped < 1] = 1
-                self.temp_fix = (self.temp_fix * weights_fix_last - np.transpose(self.wins_fix[0])) / weights_clipped
-                self.weights_fix[:self.wins_fix_len[0]] -= 1
-
-            if self.hcp < self.max_hc_len:
-                self.weights_fix[self.hcp] = self.weights_fix[self.hcp] + 1
-                self.temp_fix[:, self.hcp] = (self.temp_fix[:, self.hcp] * (self.weights_fix[self.hcp] - 1) + self.eegwin[i]) / self.weights_fix[self.hcp]
-                self.wins_fix[-1][self.hcp, :] = self.eegwin[i]
-                self.hcp_win[i] = self.hcp
-                self.wins_fix_len[-1] += 1
-
-        self.weights = self.weights_fix.copy()
-        self.temp = self.temp_fix.copy()
-
-        for i in range(self.stride, self.win_len):
-            self.hcp += 1
-
-            if self.rwin[i]:
-                self.hcp = 0
-
-            if self.hcp < self.max_hc_len:
-                self.weights[self.hcp] = self.weights[self.hcp] + 1
-                self.temp[:, self.hcp] = (self.temp[:, self.hcp] * (self.weights[self.hcp] - 1) + self.eegwin[i]) / self.weights[self.hcp]
-                self.hcp_win[i] = self.hcp
-
-        self.hcp = self.hcp_win[self.stride-1]
-
-    def detect(self, last_time):
-        # print('last_time = ', last_time)
-        ecg_win = np.asarray(self.eegwin, dtype=np.float32)[:, self.ecg_chn:self.ecg_chn+1]  # ecg_win = np.asarray([self.eegwin[i][self.ecg_chn] for i in range(len(self.eegwin))])
+    def detect(self):
+        # Extract the ECG
+        ecg_win = np.asarray([timepoints[self.ecg_id] for timepoints in self.detect_win])
+        # Filter
+        if self.filter_ecg:
+            ecg_win = filtfilt(self._b, self._a, ecg_win)
+        # Add singleton dimension and cast to float32 (numba predictor expects a [win_len x 1] float32 array)
+        ecg_win = np.float32(ecg_win[:, None])
+        # Normalize
         norm_win = normalize_bound(ecg_win, lb=-1, ub=1)
-
-        # t1 = time.perf_counter()
-        pred_win = self.predictor.predict(norm_win, self.numba)
-        # print('detection_time: ', time.perf_counter() - t1)
-
+        # Estimate R peak probabilities
+        pred_win = self.predictor.predict(norm_win)
         # Average overlapping parts in last prediction windows
         self.pred_wins.appendleft(pred_win)
         avg_win = np.zeros(len(pred_win))
@@ -346,20 +254,13 @@ class PA(Node):
             for wi in range(min(len(self.pred_wins), max_height)):  # e.g. for part = 4: stack 1 win; if part = 3: stack 1 win if wins = 1, stack 2 wins if wins = 2;
                 parts.append(self.pred_wins[wi][self.part_lims[pi + wi]:self.part_lims[pi + 1 + wi]])
             avg_win[self.part_lims[pi]:self.part_lims[pi + 1]] = np.asarray(parts).mean(axis=0)
-
         # Threshold
         peak_ids = np.where(avg_win > self.thres)[0]
-
-        snap_ids = correct_peaks(sig=ecg_win,
-                                peak_inds=peak_ids,
-                                search_radius=5,
-                                smooth_window_size=20,
-                                peak_dir='up')  # e.g. array([39,39,39,39,39, 101,101, 142,142,142,142,142, 180])
-
+        # Snap detections to local maxima
+        snap_ids = WFDBPeaks.correct_peaks(sig=ecg_win, peak_inds=peak_ids, search_radius=5, smooth_window_size=20, peak_dir='up')  # e.g. array([39,39,39,39,39, 101,101, 142,142,142,142,142, 180])
         # Filter maxima (consider just those w/ 5 snaps or more)
         vals, counts = np.unique(snap_ids, return_counts=True)
         filt_ids = np.extract(counts >= 5, vals)
-
         # Remove close maxima with lower prediction score
         dist = 0
         if len(filt_ids) > 0:
@@ -367,65 +268,338 @@ class PA(Node):
             dist_scores = np.ones(len(filt_ids), dtype=bool)
             for i in range(1, len(filt_ids)):
                 dist = dist + filt_ids[i] - filt_ids[i - 1]
-                if dist < self.min_hc_len:
+                if dist < self.min_hc:
                     close_ids.append(filt_ids[i])
-                if dist >= self.min_hc_len:
+                if dist >= self.min_hc:
                     max_id = np.argmax(avg_win[close_ids])
                     for j in range(len(close_ids)):
                         if j != max_id:
-                            dist_scores[i-len(close_ids) + j] = False
+                            dist_scores[i - len(close_ids) + j] = False
                     close_ids = [filt_ids[i]]
                     dist = 0
-                elif i == len(filt_ids)-1:
+                elif i == len(filt_ids) - 1:
                     max_id = np.argmax(avg_win[close_ids])
                     for j in range(len(close_ids)):
                         if j != max_id:
-                            dist_scores[i-len(close_ids) + 1 + j] = False
-
+                            dist_scores[i - len(close_ids) + 1 + j] = False
             filt_ids = filt_ids[dist_scores]
-
-        # self.marker_output_r.set(['R'], [chunk.index[np.argmax(mask)]])
-        # print('type(filt_ids) = ', type(filt_ids))
-
-        # times_r = last_time - (self.win_len - 1 - filt_ids) / self.fs
-        # print(times_r)
-
         # Update deque with predictions
-        self.rwin = deque([False] * self.win_len, maxlen=self.win_len)
+        self.rpeaks_win = deque([False] * self.win_len, maxlen=self.win_len)
         for fi in filt_ids:
-            self.rwin[fi] = True
-            self.marker_output.set(['R'], [last_time - (self.win_len - 1 - fi) / self.fs])
+            self.rpeaks_win[fi] = True
+            self.marker_output.set(['R peak'], [self.time_win[fi]])
+            # Optional markers. If you want to record the detected R peaks to use offline, I recommend using the 'R peak fixed'. The normal R peaks are updated every detection, so they can be numerous and regarding the same ECG points. The 'R peak fixed' correspond to the last update (and hence, is also more robust)
+            if fi < self.stride:
+                self.marker_output.set(['R peak fixed'], [self.time_win[fi]])
+            # elif fi < self.win_len - self.margin:
+            #     self.marker_output.set(['R peak'], [self.time_win[fi]])
+            # else:
+            #     self.marker_output.set(['R peak marginalized'], [self.time_win[fi]])
+        # Send a marker to mark the start of the R peak detection
+        self.detection_time = self.time_win[-1]
+        if self.detection_start:
+            self.marker_output.set(['Start of R peak detection'], [self.detection_time])
+            self.detection_start = False
+        # Optional markers: (useful for debugging)
+        # self.marker_output.set(['R peak detection'], [self.detection_time])
+        # self.marker_output.set(['Hold limit'], [self.time_win[self.hlim]])
+        # self.marker_output.set(['Margin'], [self.time_win[self.hlim + self.stride]])
+
+    def make_template(self):
+        self.hcp_win.fill(self.max_hc)
+        for i in range(self.stride):
+            self.hcp += 1
+            if self.rpeaks_win[i]:
+                self.wins_fix.append(np.zeros((self.max_hc, self.nchans)))
+                self.wins_fix_len.append(0)
+                self.hcp = 0
+                self.hc += 1  # Number of complete unmodifiable heart cycles
+                weights_fix_last = self.weights_fix.copy()
+                weights_clipped = self.weights_fix.copy()
+                weights_clipped[:self.wins_fix_len[0]] -= 1
+                weights_clipped[weights_clipped < 1] = 1
+                self.temp_fix = (self.temp_fix * weights_fix_last - np.transpose(self.wins_fix[0])) / weights_clipped
+                self.weights_fix[:self.wins_fix_len[0]] -= 1
+
+            if self.hcp < self.max_hc:
+                self.weights_fix[self.hcp] = self.weights_fix[self.hcp] + 1
+                self.temp_fix[:, self.hcp] = (self.temp_fix[:, self.hcp] * (self.weights_fix[self.hcp] - 1) + self.detect_win[i]) / self.weights_fix[self.hcp]
+                self.wins_fix[-1][self.hcp, :] = self.detect_win[i]
+                self.hcp_win[i] = self.hcp
+                self.wins_fix_len[-1] += 1
+
+        self.weights = self.weights_fix.copy()
+        self.temp = self.temp_fix.copy()
+
+        for i in range(self.stride, self.win_len - self.margin):
+            self.hcp += 1
+            if self.rpeaks_win[i]:
+                self.hcp = 0
+
+            if self.hcp < self.max_hc:
+                self.weights[self.hcp] = self.weights[self.hcp] + 1
+                self.temp[:, self.hcp] = (self.temp[:, self.hcp] * (self.weights[self.hcp] - 1) + self.detect_win[i]) / self.weights[self.hcp]
+                self.hcp_win[i] = self.hcp
+
+        self.hcp = self.hcp_win[self.stride - 1]
+
+    def subtract(self, segment):
+        segment_hc_labels = self.hcp_win[self.hlim:self.hlim + self.stride]
+        mask_len = segment_hc_labels < self.max_hc
+        mask_wei = self.weights[segment_hc_labels * mask_len] > self.min_wins
+        mask = mask_len * mask_wei
+        if any(mask):
+            segment.iloc[mask, :self.ecg_id] -= np.transpose(self.temp[:self.ecg_id, segment_hc_labels[mask]])  # Subtract the template to the current segment
+            if self.subtracting_start:
+                self.subtracting_start_time = segment.index[np.argmax(mask)]
+                self.marker_output.set(['Start of PA subtraction'], [self.subtracting_start_time], columns=['marker'])
+                self.subtracting_start = False
+        return segment
 
 
-        # Short-sight
-        if self.short_sight == 'both':
-            self.short_sight_len = self.min_foresight_len
+class PredictRPeaks:
+    def __init__(self, weight_path, numba=True):
+        self.weights = pickle.load(open(weight_path, 'rb'))
+        self.ht = np.zeros((self.weights['t'], self.weights['u']), dtype=np.float32)
+        self.c = np.zeros((1, self.weights['u']), dtype=np.float32)
+        self.t = self.weights['t']
+        self.numba = numba
 
-        elif self.short_sight == 'positive':
-            short_sighted = int(filt_ids[np.searchsorted(filt_ids, self.min_foresight_id, side='right'):])
-            self.short_sight_len = np.append(self.win_len - short_sighted, 0)[0]
+        if numba:
+            dummy = np.zeros((self.t, 1), dtype=np.float32)
+            # t1 = time.perf_counter()
+            self.predict(dummy)
+            # print('Numba compilation time: ', time.perf_counter() - t1)
 
-        self.detected = True
+    def predict(self, xt):
+        if self.numba:
+            return self._predict_numba(xt, self.ht, self.c, **self.weights)
+        else:
+            return self._predict(xt, self.ht, self.c, **self.weights)
 
-    def fill(self, chunk, clim1, clim2):
-        part = chunk.iloc[clim1:clim2]
-        part_len = len(part)
-        self.eegwin.extend(part.to_numpy().copy())
-        if self.debug_save:
-            pickle.dump(self.eegwin, open('eegwin.pkl', 'wb'))
-            self.debug_save = True
+    # Predict using Numba
+    @staticmethod
+    @jit(nopython=True)
+    def _predict_numba(xt, ht, c, u, t, whf1f, wxf1f, bf1f, whi1f, wxi1f, bi1f, whl1f, wxl1f, bl1f, who1f, wxo1f,
+                       bo1f, whf1b, wxf1b, bf1b, whi1b, wxi1b, bi1b, whl1b, wxl1b, bl1b, who1b, wxo1b, bo1b, whf2f,
+                       wxf2f, bf2f, whi2f, wxi2f, bi2f, whl2f, wxl2f, bl2f, who2f, wxo2f, bo2f, whf2b, wxf2b, bf2b,
+                       whi2b, wxi2b, bi2b, whl2b, wxl2b, bl2b, who2b, wxo2b, bo2b, wd, bd):
 
-        # print(self.eegwin)
-        # self.short_sighted -= part_len
+        def tanh(a):
+            return np.tanh(a)
 
-    def fill_buffers(self, chunk, clim1, clim2):
-        part = chunk.iloc[clim1:clim2]
-        self.chunk_keep = self.chunk_keep.append(part)
-        new_hcp_array = self.create_constant_array(len(part), self.max_hc_len)
-        self.chunk_keep_hcp = np.append(self.chunk_keep_hcp, new_hcp_array)
+        def sig(a):
+            return 1 / (1 + np.exp(-a))
+
+        def cell(x, h, c, wh1, wx1, b1, wh2, wx2, b2, wh3, wx3, b3, wh4, wx4, b4):
+            new_c = c * sig(h @ wh1 + x @ wx1 + b1) + sig(h @ wh2 + x @ wx2 + b2) * tanh(h @ wh3 + x @ wx3 + b3)
+            new_h = tanh(new_c) * sig(h @ wh4 + x @ wx4 + b4)
+            return new_c, new_h
+
+        def LSTMf(xt, ht, c, t, whf, wxf, bf, whi, wxi, bi, whl, wxl, bl, who, wxo, bo):
+            h = ht[t - 1:t]
+            for i in range(t):
+                c, h = cell(xt[i:i + 1], h, c, whf, wxf, bf, whi, wxi, bi, whl, wxl, bl, who, wxo, bo)
+                ht[i] = h
+            return ht
+
+        def LSTMb(xt, ht, c, t, whf, wxf, bf, whi, wxi, bi, whl, wxl, bl, who, wxo, bo):
+            h = ht[0:1]
+            for i in range(t - 1, -1, -1):
+                c, h = cell(xt[i:i + 1], h, c, whf, wxf, bf, whi, wxi, bi, whl, wxl, bl, who, wxo, bo)
+                ht[i] = h
+            return ht
+
+        def dense(xt, wd, bd):
+            return sig(xt @ wd + bd)
+
+        # LSTM-bi 1
+        hf = LSTMf(xt, ht.copy(), c, t, whf1f, wxf1f, bf1f, whi1f, wxi1f, bi1f, whl1f, wxl1f, bl1f, who1f, wxo1f, bo1f)
+        hb = LSTMb(xt, ht.copy(), c, t, whf1b, wxf1b, bf1b, whi1b, wxi1b, bi1b, whl1b, wxl1b, bl1b, who1b, wxo1b, bo1b)
+        xt = np.concatenate((hf, hb), axis=1)
+        # LSTM-bi 2
+        hf = LSTMf(xt, ht.copy(), c, t, whf2f, wxf2f, bf2f, whi2f, wxi2f, bi2f, whl2f, wxl2f, bl2f, who2f, wxo2f, bo2f)
+        hb = LSTMb(xt, ht.copy(), c, t, whf2b, wxf2b, bf2b, whi2b, wxi2b, bi2b, whl2b, wxl2b, bl2b, who2b, wxo2b, bo2b)
+        xt = np.concatenate((hf, hb), axis=1)
+        # DENSE
+        yt = dense(xt, wd, bd)
+        return yt[:, 0]
+
+    # Predict without using Numba
+    @staticmethod
+    def _predict(xt, ht, c, u, t, whf1f, wxf1f, bf1f, whi1f, wxi1f, bi1f, whl1f, wxl1f, bl1f, who1f, wxo1f, bo1f,
+                 whf1b, wxf1b, bf1b, whi1b, wxi1b, bi1b, whl1b, wxl1b, bl1b, who1b, wxo1b, bo1b, whf2f, wxf2f, bf2f,
+                 whi2f, wxi2f, bi2f, whl2f, wxl2f, bl2f, who2f, wxo2f, bo2f, whf2b, wxf2b, bf2b, whi2b, wxi2b, bi2b,
+                 whl2b, wxl2b, bl2b, who2b, wxo2b, bo2b, wd, bd):
+
+        def tanh(a):
+            return np.tanh(a)
+
+        def sig(a):
+            return 1 / (1 + np.exp(-a))
+
+        def cell(x, h, c, wh1, wx1, b1, wh2, wx2, b2, wh3, wx3, b3, wh4, wx4, b4):
+            new_c = c * sig(h @ wh1 + x @ wx1 + b1) + sig(h @ wh2 + x @ wx2 + b2) * tanh(h @ wh3 + x @ wx3 + b3)
+            new_h = tanh(new_c) * sig(h @ wh4 + x @ wx4 + b4)
+            return new_c, new_h
+
+        def LSTMf(xt, ht, c, t, whf, wxf, bf, whi, wxi, bi, whl, wxl, bl, who, wxo, bo):
+            h = ht[t - 1:t]
+            for i in range(t):
+                c, h = cell(xt[i:i + 1], h, c, whf, wxf, bf, whi, wxi, bi, whl, wxl, bl, who, wxo, bo)
+                ht[i] = h
+            return ht
+
+        def LSTMb(xt, ht, c, t, whf, wxf, bf, whi, wxi, bi, whl, wxl, bl, who, wxo, bo):
+            h = ht[0:1]
+            for i in range(t - 1, -1, -1):
+                c, h = cell(xt[i:i + 1], h, c, whf, wxf, bf, whi, wxi, bi, whl, wxl, bl, who, wxo, bo)
+                ht[i] = h
+            return ht
+
+        def dense(xt, wd, bd):
+            return sig(xt @ wd + bd)
+
+        # LSTM-bi 1
+        hf = LSTMf(xt, ht.copy(), c, t, whf1f, wxf1f, bf1f, whi1f, wxi1f, bi1f, whl1f, wxl1f, bl1f, who1f, wxo1f, bo1f)
+        hb = LSTMb(xt, ht.copy(), c, t, whf1b, wxf1b, bf1b, whi1b, wxi1b, bi1b, whl1b, wxl1b, bl1b, who1b, wxo1b, bo1b)
+        xt = np.concatenate((hf, hb), axis=1)
+        # LSTM-bi 2
+        hf = LSTMf(xt, ht.copy(), c, t, whf2f, wxf2f, bf2f, whi2f, wxi2f, bi2f, whl2f, wxl2f, bl2f, who2f, wxo2f, bo2f)
+        hb = LSTMb(xt, ht.copy(), c, t, whf2b, wxf2b, bf2b, whi2b, wxi2b, bi2b, whl2b, wxl2b, bl2b, who2b, wxo2b, bo2b)
+        xt = np.concatenate((hf, hb), axis=1)
+        # DENSE
+        yt = dense(xt, wd, bd)
+        return yt[:, 0]
+
+
+# Gustavo's note:
+# The R detection uses two functions from the library "wfdb", found in: wfdb.processing.peaks
+# I have copied them here because I have made two changes:
+# (1) I have commented the smoothing step in correct_peaks (I already specified an option to bandpass the ecg)
+# (2) I changed shift_peaks because I found it to be incorrect.
+# Until the wfdb library accomodates theses changes, I am using them from here:
+class WFDBPeaks:
 
     @staticmethod
-    def create_constant_array(length, value):
-        array = np.empty(length, dtype=int)
-        array.fill(value)
-        return array
+    def correct_peaks(sig, peak_inds, search_radius, smooth_window_size,
+                      peak_dir='compare'):
+        """
+        Adjust a set of detected peaks to coincide with local signal maxima,
+        and
+
+        Parameters
+        ----------
+        sig : numpy array
+            The 1d signal array
+        peak_inds : np array
+            Array of the original peak indices
+        max_gap : int
+            The radius within which the original peaks may be shifted.
+        smooth_window_size : int
+            The window size of the moving average filter applied on the
+            signal. Peak distance is calculated on the difference between
+            the original and smoothed signal.
+        peak_dir : str, optional
+            The expected peak direction: 'up' or 'down', 'both', or
+            'compare'.
+
+            - If 'up', the peaks will be shifted to local maxima
+            - If 'down', the peaks will be shifted to local minima
+            - If 'both', the peaks will be shifted to local maxima of the
+              rectified signal
+            - If 'compare', the function will try both 'up' and 'down'
+              options, and choose the direction that gives the largest mean
+              distance from the smoothed signal.
+
+        Returns
+        -------
+        corrected_peak_inds : numpy array
+            Array of the corrected peak indices
+
+
+        Examples
+        --------
+
+        """
+        sig_len = sig.shape[0]
+        n_peaks = len(peak_inds)
+
+        # Subtract the smoothed signal from the original
+        # sig = sig - smooth(sig=sig, window_size=smooth_window_size)
+
+        # Shift peaks to local maxima
+        if peak_dir == 'up':
+            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=sig,
+                                            peak_inds=peak_inds,
+                                            search_radius=search_radius,
+                                            peak_up=True)
+        elif peak_dir == 'down':
+            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=sig,
+                                            peak_inds=peak_inds,
+                                            search_radius=search_radius,
+                                            peak_up=False)
+        elif peak_dir == 'both':
+            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=np.abs(sig),
+                                            peak_inds=peak_inds,
+                                            search_radius=search_radius,
+                                            peak_up=True)
+        else:
+            shifted_peak_inds_up = WFDBPeaks.shift_peaks(sig=sig,
+                                               peak_inds=peak_inds,
+                                               search_radius=search_radius,
+                                               peak_up=True)
+            shifted_peak_inds_down = WFDBPeaks.shift_peaks(sig=sig,
+                                                 peak_inds=peak_inds,
+                                                 search_radius=search_radius,
+                                                 peak_up=False)
+
+            # Choose the direction with the biggest deviation
+            up_dist = np.mean(np.abs(sig[shifted_peak_inds_up]))
+            down_dist = np.mean(np.abs(sig[shifted_peak_inds_down]))
+
+            if up_dist >= down_dist:
+                shifted_peak_inds = shifted_peak_inds_up
+            else:
+                shifted_peak_inds = shifted_peak_inds_down
+
+        return shifted_peak_inds
+
+    @staticmethod
+    def shift_peaks(sig, peak_inds, search_radius, peak_up):
+        """
+        Helper function for correct_peaks. Return the shifted peaks to local
+        maxima or minima within a radius.
+
+        peak_up : bool
+            Whether the expected peak direction is up
+        """
+        sig_len = sig.shape[0]
+        n_peaks = len(peak_inds)
+        # The indices to shift each peak ind by
+        shift_inds = np.zeros(n_peaks, dtype='int')
+
+        # Iterate through peaks
+        for i in range(n_peaks):
+            ind = peak_inds[i]
+            # Gustavo: (why not go to the end?!)
+            # local_sig = sig[max(0, ind - search_radius):min(ind + search_radius, sig_len-1)]
+            local_sig = sig[max(0, ind - search_radius):min(ind + search_radius + 1, sig_len)]
+
+            if peak_up:
+                shift_inds[i] = np.argmax(local_sig)
+            else:
+                shift_inds[i] = np.argmin(local_sig)
+
+        # May have to adjust early values
+        for i in range(n_peaks):
+            ind = peak_inds[i]
+            if ind >= search_radius:
+                break
+            # Gustavo: just wrong
+            # shift_inds[i] -= search_radius - ind
+            shift_inds[i] += search_radius - ind
+
+        shifted_peak_inds = peak_inds + shift_inds - search_radius
+
+        return shifted_peak_inds
