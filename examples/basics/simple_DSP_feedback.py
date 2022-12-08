@@ -8,7 +8,7 @@ def square(x):
 
 lsl_reception = io.LslReceive(
     prop='type',
-    value='EEG',
+    value='signal',
     data_type='signal'
 )
 
@@ -29,7 +29,7 @@ epoch = epoching.TimeBasedEpoching(
     interval=0.5
 )
 
-average = epoch_function.UnvariateStat(
+average = epoch_function.UnivariateStat(
     input_port=epoch.output,
     stat='mean'
 )

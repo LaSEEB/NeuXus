@@ -7,6 +7,24 @@ from xml.dom import minidom
 
 from neuxus.node import Node
 
+# GUSTAVO:
+class ChannelUpdater(Node):
+    def __init__(self, input_port1, input_port2):
+        Node.__init__(self, input_port1)
+        self.input2 = input_port2
+
+        self.output.set_parameters(
+            data_type=self.input.data_type,
+            channels=self.input.channels,
+            sampling_frequency=self.input.sampling_frequency,
+            meta=self.input.meta,
+            epoching_frequency=self.input.epoching_frequency
+        )
+
+    def update(self):
+        for i in range(len(self.input._data)):
+            self.input._data[i].update(self.input2._data[i])
+            self.output.set_from_df(self.input._data[i])
 
 class ChannelSelector(Node):
     """Select a subset of signal channels

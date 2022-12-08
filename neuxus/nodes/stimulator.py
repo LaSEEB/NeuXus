@@ -211,6 +211,8 @@ class Config(object):
         t = 0
         for marker in self._init:
             scenario.append([marker.get_name(), t])
+            # Gustavo
+            # print('marker: ', marker)
             t += marker.get_duration()
 
         # send loop
@@ -245,7 +247,9 @@ class Config(object):
         for marker in self._end:
             scenario.append([marker.get_name(), t])
             t += marker.get_duration()
-
+        # /Gustavo:
+        print(t//60)
+        print(t-(t//60)*60)
         return scenario
 
 
@@ -260,8 +264,11 @@ class Marker(object):
         self.max_duration = max_duration
 
     def get_duration(self):
-        if self.duration:
+        # Gustavo:
+        if self.duration is not None:
             return self.duration
+        # if self.duration:         # if 0 gives False, but we might want durations = 0!!
+        #     return self.duration
         else:
             return rd.uniform(self.min_duration, self.max_duration)
 
@@ -370,8 +377,8 @@ class Stimulator(Node):
 
     """
 
-    def __init__(self, file):
-        Node.__init__(self, None)
+    def __init__(self, file, input_port=None, start_marker=None):
+        Node.__init__(self, input_port)
         try:
             config = Config(file)
         except (ConfigFileNotInAccordance, FileNotFound, InvalidXml) as err:
@@ -379,6 +386,15 @@ class Stimulator(Node):
             exit()
 
         self._scenario = config.create_a_new_scenario()
+
+        # if (start_marker is not None) and (input_port is not None):
+        #     self.start_marker = start_marker
+        #     self.start = False
+        # else:
+        #     self.start = True
+
+        self.start_marker = start_marker
+        self.start = (start_marker is None) or (input_port is None)
 
         self.output.set_parameters(
             data_type='marker',
@@ -405,21 +421,113 @@ class Stimulator(Node):
         self._start_time = None
 
     def update(self):
-        if not self._start_time:
-            self._start_time = time()
-            for markers in self._scenario:
-                markers[1] = markers[1] + self._start_time
-        t = time()
-        while self._scenario and t >= self._scenario[0][1]:
-            self.output.set(self._scenario[0][0], [self._scenario[0][1]], ['marker'])
-            try:
-                self.plot_pipe.send(self._scenario[0][0])
-            except BrokenPipeError:
-                pass
-            self._scenario = self._scenario[1:]
+        if not self.start:
+            for chunk in self.input:
+                values = chunk.select_dtypes(include=[np.number]).values
+                # self.start = self.start_marker in values
+                # if chunk.iloc[:,0].str.contains(self.start_marker).any():
+                #     self.start = True
+                self.start = chunk.iloc[:,0].str.contains(self.start_marker).any()
+                # print('self.start', self.start)
+
+        if self.start:
+            if not self._start_time:
+                self._start_time = time()
+                for markers in self._scenario:
+                    markers[1] = markers[1] + self._start_time
+            t = time()
+            while self._scenario and t >= self._scenario[0][1]:
+                self.output.set(self._scenario[0][0], [self._scenario[0][1]], ['marker'])
+                try:
+                    self.plot_pipe.send(self._scenario[0][0])
+                except BrokenPipeError:
+                    pass
+                self._scenario = self._scenario[1:]
 
     def terminate(self):
         try:
             self.plot_pipe.send(None,)
         except BrokenPipeError:
             pass
+
+
+# class Stimulator_when(Node):
+#     """Generate a marker stream from a config file
+#     Attributes:
+#       - output (Port): Output port
+#     Args:
+#       - file (str): Path to the xml config file
+#
+#     example: Stimulator('config_ov.xml)
+#
+#     """
+#
+#     # def __init__(self, file, input_port):
+#         # Node.__init__(self, input_port, False)
+#     def __init__(self, file, input_port, start_marker):
+#         Node.__init__(self, input_port, True)
+#         try:
+#             config = Config(file)
+#         except (ConfigFileNotInAccordance, FileNotFound, InvalidXml) as err:
+#             print(err)
+#             exit()
+#
+#         self._scenario = config.create_a_new_scenario()
+#         self.start_marker = start_marker
+#         self.start = False
+#
+#         self.output.set_parameters(
+#             data_type='marker',
+#             channels=['marker'],
+#             sampling_frequency=0,
+#             meta='')
+#
+#         # create the plot process
+#         self.plot_pipe, plotter_pipe = mp.Pipe()
+#         self.plotter = ProcessStim(len(self._scenario))
+#         self.plot_process = mp.Process(
+#             target=self.plotter, args=(plotter_pipe,), daemon=True)
+#         self.plot_process.start()
+#
+#         Node.log_instance(self, {
+#             'file': file,
+#             'name': config.name,
+#             'author': config.author,
+#             'session': config.session,
+#             'nb of trials': config.number_of_trials,
+#             'classes': config.classes,
+#             'random': config.random,
+#             'type': config.type})
+#         self._start_time = None
+#
+#     def update(self):
+#
+#         if not self.start:
+#             # print('self.input: ', self.input)
+#             # print('self.input._data: ', self.input._data)
+#             for chunk in self.input:
+#                 # print('chunk: ', chunk)
+#                 # print(chunk[0].str.contains('R128').any())
+#                 # print(chunk.iloc[:,0].str.contains('R128').any())
+#                 if chunk.iloc[:,0].str.contains(self.start_marker).any():
+#                     self.start = True
+#
+#         if self.start:
+#             if not self._start_time:
+#                 self._start_time = time()
+#                 for markers in self._scenario:
+#                     markers[1] = markers[1] + self._start_time
+#             t = time()
+#             while self._scenario and t >= self._scenario[0][1]:
+#                 self.output.set(self._scenario[0][0], [self._scenario[0][1]], ['marker'])
+#                 try:
+#                     self.plot_pipe.send(self._scenario[0][0])
+#                 except BrokenPipeError:
+#                     pass
+#                 self._scenario = self._scenario[1:]
+#
+#     def terminate(self):
+#         try:
+#             self.plot_pipe.send(None,)
+#         except BrokenPipeError:
+#             pass

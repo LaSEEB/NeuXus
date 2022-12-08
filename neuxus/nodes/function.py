@@ -27,7 +27,7 @@ class ApplyFunction(Node):
 
     """
 
-    def __init__(self, input_port, function):
+    def __init__(self, input_port, function, *args):
         Node.__init__(self, input_port)
 
         assert self.input.data_type in ['epoch', 'signal']
@@ -39,7 +39,9 @@ class ApplyFunction(Node):
             meta=self.input.meta,
             epoching_frequency=self.input.epoching_frequency)
 
+        self.args = args
         self.function = function
+        self.y = []
 
         Node.log_instance(self, {
             'function': self.function
@@ -49,4 +51,4 @@ class ApplyFunction(Node):
 
     def update(self):
         for chunk in self.input:
-            self.output.set_from_df(chunk.apply(self.function, axis=1, raw=True))
+            self.output.set_from_df(chunk.apply(self.function, args=self.args, axis=1, raw=True))

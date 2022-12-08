@@ -50,24 +50,32 @@ class Mat(Node):
 
     """
 
-    def __init__(self, input_port, file):
+    def __init__(self, input_port, file, min_itemsize=None):
         Node.__init__(self, input_port, None)
         filename, file_extension = os.path.splitext(file)
         self._file = filename + '.mat'
 
         letters = string.ascii_lowercase
-        self._key = ''.join(choice(letters) for i in range(3))
+        # self._key = ''.join(choice(letters) for i in range(3))
 
-        self._save_file = 'temporary_file_' + self._key + '.h5'
+        # GUSTAVO TEST;
+        i = 0
+        while os.path.exists(f'temp{i:04d}.h5'):
+            i += 1
+        self._key = f'temp{i:04d}'
+        self._save_file = self._key + '.h5'
+        self._min_itemsize = min_itemsize
+
+        # self._save_file = 'temporary_file_' + self._key + '.h5'
 
         chan = self.input.channels
-        pd.DataFrame([] * len(chan), [], chan).to_hdf(self._save_file, key=self._key, mode='w', format='table')
+        pd.DataFrame([] * len(chan), [], chan).to_hdf(self._save_file, key=self._key, mode='w', format='table', min_itemsize=self._min_itemsize)
 
         Node.log_instance(self, {'file': self._file})
 
     def update(self):
         for chunk in self.input:
-            chunk.to_hdf(self._save_file, append=True, mode='a', key=self._key)
+            chunk.copy().to_hdf(self._save_file, append=True, mode='a', key=self._key, min_itemsize=self._min_itemsize)
 
     def terminate(self):
         df = pd.read_hdf(self._save_file, key=self._key)

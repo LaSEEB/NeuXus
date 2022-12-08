@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from scipy import signal
+from scipy import signal, stats
 
 from neuxus.node import Node
 
@@ -26,13 +26,14 @@ class UnivariateStat(Node):
 
     """
 
-    def __init__(self, input_port, stat, quantile=None, iqr_quantile=[None, None]):
+    def __init__(self, input_port, stat, quantile=None, iqr_quantile=[None, None], ttest_mean=None):
         Node.__init__(self, input_port)
 
         assert self.input.data_type == 'epoch'
 
-        assert stat in ['mean', 'min', 'max', 'range', 'std', 'median', 'quantile', 'iqr']
+        assert stat in ['mean', 'min', 'max', 'range', 'std', 'median', 'quantile', 'iqr', 'ttest_1samp']
         self._stat = stat
+        self._ttest_mean = ttest_mean
 
         self.output.set_parameters(
             data_type='signal',
@@ -86,6 +87,10 @@ class UnivariateStat(Node):
                 stat = epoch.median()
             elif self._stat == 'iqr':
                 stat = epoch.quantile(q=self._q2) - epoch.quantile(q=self._q1)
+            elif self._stat == 'ttest_1samp':
+                tstat, pval = stats.ttest_1samp(epoch, self._ttest_mean.value, axis=0, nan_policy='propagate', alternative='less')
+                stat = pd.Series(data=pval, index=epoch.columns)
+
             self.output.set_from_df(pd.DataFrame(
                 stat, columns=[epoch.index[-1]]).transpose())
             self.value = np.array(stat.values)
