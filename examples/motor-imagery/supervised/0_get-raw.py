@@ -6,12 +6,12 @@ from neuxus.nodes import *
 
 date = datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
 print (date)
-features_file = '../examples/motor-imagery-simple/Epochs_raw_'+date
+features_file = '../examples/motor-imagery/supervised/Epochs_raw_'+date  # Change accordingly
 
 lsl_signal = generate.Generator('simulation', 32, 250)
 
 #stimulation and visualization
-lsl_markers = stimulator.Stimulator('../utils/stimulus/config_ov.xml') # load config
+lsl_markers = stimulator.Stimulator('../utils/stimulus/config_ov.xml') # load config; Change accordingly
 graz_vis = display.Graz(lsl_markers.output) # visualize
 
 

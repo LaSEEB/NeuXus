@@ -30,5 +30,5 @@ log_power = function.ApplyFunction(average_epoch.output, lambda x: np.log1p(x)) 
 
 
 features = feature.FeatureAggregator(log_power.output) #create feature vector
-mi_class = classify.Classify(features.output, 'examples/motor-imagery-simple/lda_model.sav', 'probability')#load model and predict class labels
+mi_class = classify.Classify(features.output, 'examples/motor-imagery/supervised/lda_model.sav', 'probability')#load model and predict class labels
 disp1 = display.Plot(mi_class.output)

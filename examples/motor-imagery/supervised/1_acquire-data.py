@@ -5,10 +5,10 @@ from neuxus.nodes import *
 
 date = datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
 print (date)
-features_file = '../examples/motor-imagery-simple/Epochs_'+date
+features_file = '../examples/motor-imagery-simple/Epochs_'+date  # Change accordingly
 
 #stimulation and visualization
-lsl_markers = stimulator.Stimulator('../utils/stimulus/config_ov.xml') # load config
+lsl_markers = stimulator.Stimulator('../utils/stimulus/config_ov.xml') # load config; Change accordingly
 send_lsl_markers = io.LslSend(lsl_markers.output, 'my_stimulus', 'Markers') # send via LSL
 graz_vis = display.Graz(lsl_markers.output) # visualize
 

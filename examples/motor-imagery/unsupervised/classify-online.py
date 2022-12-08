@@ -3,38 +3,40 @@ from neuxus.nodes import read, display, io, filter, select, epoching, function, 
 import argparse
 import subprocess
 
+sfol = ''  # Folder to save results to
+fil = 'sub-02_ses-lab1_task-neurowMINF'  # File name to save results as (and if reading from a file, to load data from)
 
 # If acquiring data by LSL
-MARKERS = {
-    'show_cross': 5,
-    'show_left_arrow': 7,
-    'show_rigth_arrow': 8,
-    'hide_arrow': 9,
-    'hide_cross': 10,
-    'exit_': 12,
-}
+# MARKERS = {
+#     'show_cross': 5,
+#     'show_left_arrow': 7,
+#     'show_rigth_arrow': 8,
+#     'hide_arrow': 9,
+#     'hide_cross': 10,
+#     'exit_': 12,
+# }
+
 # Receive data from Recorder
-signal = io.RdaReceive(rdaport=51244)
+# signal = io.RdaReceive(rdaport=51244)
 
 # Generate stimulators
-markers = stimulator.Stimulator(file='/stimulations.xml')
-
-# Display markers in Graz protocol
-# marker_display = display.Graz(signal.marker_output)    # When reading from a file
-marker_display = display.Graz(markers.output)
+# markers = stimulator.Stimulator(file='/stimulations.xml')
 
 # OPTIONALLY, read data from file:
-# MARKERS = {
-#     'show_cross': 'Stimulus/S  5',
-#     'show_rigth_arrow': 'Stimulus/S  8',
-#     'show_left_arrow': 'Stimulus/S  7',
-#     'hide_arrow': 'Stimulus/S  9',
-#     'hide_cross': 'Stimulus/S 10',
-#     'exit_': 'Stimulus/S 12',
-# }
+MARKERS = {
+    'show_cross': 'Stimulus/S  5',
+    'show_rigth_arrow': 'Stimulus/S  8',
+    'show_left_arrow': 'Stimulus/S  7',
+    'hide_arrow': 'Stimulus/S  9',
+    'hide_cross': 'Stimulus/S 10',
+    'exit_': 'Stimulus/S 12',
+}
 # Read data
-# signal = read.Reader('sub-02_ses-lab1_task-neurowMINF.vhdr')
+signal = read.Reader(fil + '.vhdr')
 
+# Display markers in Graz protocol
+marker_display = display.Graz(signal.marker_output)    # When reading from a file
+# marker_display = display.Graz(markers.output)  # When receiving from a stream
 
 # Temporal + spatial filter
 signal_filt = filter.ButterFilter(signal.output, 1, 30)
@@ -43,8 +45,8 @@ signal_chans = select.ChannelSelector(signal_car.output, 'index', [8, 25])
 signal_filt = filter.ButterFilter(signal_chans.output, 8, 12)
 
 # Baseline
-# base = epoching.StimulationBasedEpoching(signal_filt.output, signal.marker_output, MARKERS['show_cross'], 0, 5)  # When reading from a file
-base = epoching.StimulationBasedEpoching(signal_filt.output, markers.output, MARKERS['show_cross'], 0, 5)
+base = epoching.StimulationBasedEpoching(signal_filt.output, signal.marker_output, MARKERS['show_cross'], 0, 5)  # When reading from a file
+# base = epoching.StimulationBasedEpoching(signal_filt.output, markers.output, MARKERS['show_cross'], 0, 5)    # When receiving from a stream
 base_squared = function.ApplyFunction(base.output, lambda x: x**2)
 base_mean = epoch_function.UnivariateStat(base_squared.output, 'mean')
 base_epoch = epoching.TimeBasedEpoching(base_squared.output, 1, 0.25)  # Once base(_squared) is complete, it will be epoched at once
