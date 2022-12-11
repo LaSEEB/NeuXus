@@ -15,7 +15,7 @@ In D_train.py, although it is not necessary to use a GPU, it's recommended since
 1. **Install CUDA, CudNN and Python**
 
     - cuda_11.0.3_451.82_win10.exe
-    - cudnn-11.0_windows-x64-v8.0.4.30.zip
+    - cudnn-11.0-windows-x64-v8.0.4.30.zip
     - Python 3.8
 
     Later on, when training the model, I had the error: "Could not open dynamic library 'cusolver64_10.dll". So, following: "https://stackoverflow.com/questions/65608713/tensorflow-gpu-could-not-load-dynamic-library-cusolver64-10-dll-dlerror-cuso", I made the following step:
