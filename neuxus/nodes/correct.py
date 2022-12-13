@@ -9,6 +9,7 @@ from scipy.signal import butter, filtfilt
 import pickle
 from numba import jit
 import matplotlib.pyplot as plt
+import logging
 
 
 class GA(Node):
@@ -366,6 +367,7 @@ class PredictRPeaks:
         self.numba = numba
 
         if numba:
+            logging.info("Numba is compiling the R peak detection code... Please wait")
             dummy = np.zeros((self.t, 1), dtype=np.float32)
             # t1 = time.perf_counter()
             self.predict(dummy)
