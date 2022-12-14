@@ -3,7 +3,6 @@ from neuxus.node import Node
 from collections import deque
 import pandas as pd
 from bisect import bisect_left
-from wfdb.processing import normalize_bound
 from neuxus.chunks import Port
 from scipy.signal import butter, filtfilt
 import pickle
@@ -242,7 +241,7 @@ class PA(Node):
         # Add singleton dimension and cast to float32 (numba predictor expects a [win_len x 1] float32 array)
         ecg_win = np.float32(ecg_win[:, None])
         # Normalize
-        norm_win = normalize_bound(ecg_win, lb=-1, ub=1)
+        norm_win = WFDB.normalize_bound(ecg_win, lb=-1, ub=1)
         # Estimate R peak probabilities
         pred_win = self.predictor.predict(norm_win)
         # Average overlapping parts in last prediction windows
@@ -258,7 +257,7 @@ class PA(Node):
         # Threshold
         peak_ids = np.where(avg_win > self.thres)[0]
         # Snap detections to local maxima
-        snap_ids = WFDBPeaks.correct_peaks(sig=ecg_win, peak_inds=peak_ids, search_radius=5, smooth_window_size=20, peak_dir='up')  # e.g. array([39,39,39,39,39, 101,101, 142,142,142,142,142, 180])
+        snap_ids = WFDB.correct_peaks(sig=ecg_win, peak_inds=peak_ids, search_radius=5, smooth_window_size=20, peak_dir='up')  # e.g. array([39,39,39,39,39, 101,101, 142,142,142,142,142, 180])
         # Filter maxima (consider just those w/ 5 snaps or more)
         vals, counts = np.unique(snap_ids, return_counts=True)
         filt_ids = np.extract(counts >= 5, vals)
@@ -481,7 +480,7 @@ class PredictRPeaks:
 # (1) I have commented the smoothing step in correct_peaks (I already specified an option to bandpass the ecg)
 # (2) I changed shift_peaks because I found it to be incorrect.
 # Until the wfdb library accomodates theses changes, I am using them from here:
-class WFDBPeaks:
+class WFDB:
 
     @staticmethod
     def correct_peaks(sig, peak_inds, search_radius, smooth_window_size,
@@ -532,14 +531,14 @@ class WFDBPeaks:
 
         # Shift peaks to local maxima
         if peak_dir == 'up':
-            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=True)
+            shifted_peak_inds = WFDB.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=True)
         elif peak_dir == 'down':
-            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=False)
+            shifted_peak_inds = WFDB.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=False)
         elif peak_dir == 'both':
-            shifted_peak_inds = WFDBPeaks.shift_peaks(sig=np.abs(sig), peak_inds=peak_inds, search_radius=search_radius, peak_up=True)
+            shifted_peak_inds = WFDB.shift_peaks(sig=np.abs(sig), peak_inds=peak_inds, search_radius=search_radius, peak_up=True)
         else:
-            shifted_peak_inds_up = WFDBPeaks.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=True)
-            shifted_peak_inds_down = WFDBPeaks.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=False)
+            shifted_peak_inds_up = WFDB.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=True)
+            shifted_peak_inds_down = WFDB.shift_peaks(sig=sig, peak_inds=peak_inds, search_radius=search_radius, peak_up=False)
 
             # Choose the direction with the biggest deviation
             up_dist = np.mean(np.abs(sig[shifted_peak_inds_up]))
@@ -590,3 +589,30 @@ class WFDBPeaks:
         shifted_peak_inds = peak_inds + shift_inds - search_radius
 
         return shifted_peak_inds
+
+    @staticmethod
+    def normalize_bound(sig, lb=0, ub=1):
+        """
+        Normalize a signal between the lower and upper bound
+
+        Parameters
+        ----------
+        sig : numpy array
+            Original signal to be normalized
+        lb : int, or float
+            Lower bound
+        ub : int, or float
+            Upper bound
+
+        Returns
+        -------
+        x_normalized : numpy array
+            Normalized signal
+
+        """
+        mid = ub - (ub - lb) / 2
+        min_v = np.min(sig)
+        max_v = np.max(sig)
+        mid_v =  max_v - (max_v - min_v) / 2
+        coef = (ub - lb) / (max_v - min_v)
+        return sig * coef - (mid_v * coef) + mid
