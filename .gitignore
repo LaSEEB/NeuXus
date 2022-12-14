@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/  # Commented this to add "lib/" inside "utils/train-LSTM-model/"
 lib64/
 parts/
 sdist/
