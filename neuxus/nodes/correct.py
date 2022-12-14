@@ -106,6 +106,8 @@ class GA(Node):
 class PA(Node):
     def __init__(self, input_port, weights_path, marker_input_port=None, start_marker='Start of GA subtraction', stride=50, min_wins=10, max_wins=20, min_hc=0.4, max_hc=1.5, short_sight='both', margin=0.1, thres=0.05, filter_ecg=True, numba=True):
         Node.__init__(self, input_port)
+        # A new LSTM model (whose directory is passed to this class as weights_path) can be trained to detect R peaks in a ECG
+        # by following the steps in "NeuXus/utils/train-LSTM-model/"
 
         fs = self.input.sampling_frequency
         self.marker_input = marker_input_port
