@@ -1,4 +1,4 @@
-from fun.values_until_key import values_until_key
+from values_until_key import values_until_key
 
 
 def move_run(found, pairs):

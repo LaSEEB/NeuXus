@@ -1,6 +1,5 @@
 import numpy as np
-from wfdb.processing import normalize_bound
-import lib.python.eeglab as eeglab
+import eeglab as eeglab  # import lib.python.eeglab as eeglab
 from os import listdir, path
 from matplotlib import pyplot as plt
 import pickle
@@ -72,7 +71,7 @@ class Rtrain:
                         (extra_gndt_win_ids >= 0) & (extra_gndt_win_ids < len(gndt_win))]
                     np.put(gndt_win, extra_gndt_win_ids, 1)
                     # Select data for window and normalize it (-1, 1)
-                    sig_win = normalize_bound(sig[beg:end], lb=-1, ub=1)
+                    sig_win = WFDB.normalize_bound(sig[beg:end], lb=-1, ub=1)
                     X.append(sig_win)
                     y.append(gndt_win)
             X = np.asarray(X)
@@ -380,3 +379,32 @@ class R_plot_training(tf.keras.callbacks.Callback):
         # plt.tight_layout()
         # fig.savefig('Models/' + fol + '/Training Analysis/' + 'E-{:03d}_B-last_S-first{}'.format(epoch, nsamples))
         # plt.close(fig)
+
+
+class WFDB:
+    @staticmethod
+    def normalize_bound(sig, lb=0, ub=1):
+        """
+        Normalize a signal between the lower and upper bound
+
+        Parameters
+        ----------
+        sig : numpy array
+            Original signal to be normalized
+        lb : int, or float
+            Lower bound
+        ub : int, or float
+            Upper bound
+
+        Returns
+        -------
+        x_normalized : numpy array
+            Normalized signal
+
+        """
+        mid = ub - (ub - lb) / 2
+        min_v = np.min(sig)
+        max_v = np.max(sig)
+        mid_v =  max_v - (max_v - min_v) / 2
+        coef = (ub - lb) / (max_v - min_v)
+        return sig * coef - (mid_v * coef) + mid

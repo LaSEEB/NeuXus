@@ -1,8 +1,8 @@
 import itertools
 import re
-from fun.move_run import move_run
-from fun.pairs_to_filename import pairs_to_filename
-from fun.match_dictionaries import match_dictionaries
+from move_run import move_run
+from pairs_to_filename import pairs_to_filename
+from match_dictionaries import match_dictionaries
 import copy
 
 

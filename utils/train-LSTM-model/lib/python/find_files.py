@@ -1,9 +1,12 @@
 import itertools
 from os import walk
 import re
-from lib.python.pairs_to_filename import pairs_to_filename
-from lib.python.match_dictionaries import match_dictionaries
-from lib.python.insert_in_dict import insert_in_dict
+# from lib.python.pairs_to_filename import pairs_to_filename
+# from lib.python.match_dictionaries import match_dictionaries
+# from lib.python.insert_in_dict import insert_in_dict
+from pairs_to_filename import pairs_to_filename
+from match_dictionaries import match_dictionaries
+from insert_in_dict import insert_in_dict
 
 
 def find_files(pairs):
