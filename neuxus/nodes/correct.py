@@ -484,7 +484,6 @@ class PredictRPeaks:
 # (2) I changed shift_peaks because I found it to be incorrect.
 # Until the wfdb library accomodates theses changes, I am using them from here:
 class WFDB:
-
     @staticmethod
     def correct_peaks(sig, peak_inds, search_radius, smooth_window_size,
                       peak_dir='compare'):
