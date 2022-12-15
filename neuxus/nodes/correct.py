@@ -7,9 +7,10 @@ from neuxus.chunks import Port
 from scipy.signal import butter, filtfilt
 import pickle
 from numba import jit
-import matplotlib.pyplot as plt
 import logging
 
+# For a copy of this code that only works offline (reading from files) but is easier to debug (by breakpoints and plotting), 
+# check: https://github.com/varjak/NeuXus-offline-correction
 
 class GA(Node):
     def __init__(self, input_port, marker_input_port=None, start_marker=None, min_wins=7, max_wins=30, tr=1.260, fs=5000):
