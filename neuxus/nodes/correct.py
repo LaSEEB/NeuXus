@@ -485,8 +485,7 @@ class PredictRPeaks:
 # Until the wfdb library accomodates theses changes, I am using them from here:
 class WFDB:
     @staticmethod
-    def correct_peaks(sig, peak_inds, search_radius, smooth_window_size,
-                      peak_dir='compare'):
+    def correct_peaks(sig, peak_inds, search_radius, smooth_window_size, peak_dir='compare'):
         """
         Adjust a set of detected peaks to coincide with local signal maxima,
         and
