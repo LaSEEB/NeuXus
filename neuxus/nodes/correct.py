@@ -9,7 +9,7 @@ import pickle
 from numba import jit
 import logging
 
-# For a copy of this code that only works offline (reading from files) but is easier to debug (by breakpoints and plotting), 
+# For a copy of this code that only works offline (reading from files) but is easier to debug (with breakpoints and plots), 
 # check: https://github.com/varjak/NeuXus-offline-correction
 
 class GA(Node):
