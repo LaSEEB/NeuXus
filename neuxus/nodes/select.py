@@ -1,13 +1,11 @@
 import os
-
 import pandas as pd
 import logging
 import yaml
 from xml.dom import minidom
-
 from neuxus.node import Node
 
-# GUSTAVO:
+
 class ChannelUpdater(Node):
     def __init__(self, input_port1, input_port2):
         Node.__init__(self, input_port1)
@@ -22,9 +20,11 @@ class ChannelUpdater(Node):
         )
 
     def update(self):
-        for i in range(len(self.input._data)):
-            self.input._data[i].update(self.input2._data[i])
-            self.output.set_from_df(self.input._data[i])
+        for i, chunk in enumerate(self.input):
+            chunk_copy = chunk.copy()
+            chunk_copy.update(self.input2._data[i])
+            self.output.set_from_df(chunk_copy)
+
 
 class ChannelSelector(Node):
     """Select a subset of signal channels
