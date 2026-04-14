@@ -32,8 +32,8 @@ from neuxus.nodes.classify import MIModelTrainer
 # -----------------------------------------------------------------------------
 # 'lsl'  -> live EEG + markers from LSL
 # 'file' -> replay a saved dataset with NeuXus Reader
-SOURCE_MODE = 'lsl'
-
+#SOURCE_MODE = 'lsl'
+SOURCE_MODE = 'file'
 # -----------------------------------------------------------------------------
 # Live LSL configuration
 # -----------------------------------------------------------------------------
@@ -44,7 +44,7 @@ MARKER_STREAM_TYPE = 'Markers'
 # Replay configuration
 # -----------------------------------------------------------------------------
 # Supported by NeuXus Reader: .xdf, .gdf, .set, .vhdr
-REPLAY_FILE = 'path/to/recording.xdf'
+REPLAY_FILE = '/home/thanos/Downloads/nerowMIMOHPVR/sub-03_ses-01_task-neurowMIMOHPVR_run-01.vhdr'
 REPLAY_MIN_CHUNK_SIZE = 8
 
 # -----------------------------------------------------------------------------
@@ -68,6 +68,12 @@ CLASS_MARKERS = {
     'RIGHT': 2,
     'left': 1,
     'right': 2,
+    '769': 1,
+    '770': 2,
+    '7': 1,
+    '8': 2,
+    'S 7': 1,
+    'S 8': 2,
 }
 
 NOTCH_HZ = 50
